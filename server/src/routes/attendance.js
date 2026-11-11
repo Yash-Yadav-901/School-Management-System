@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { authenticateToken, requireRoles } from '../middleware/auth.js';
-import { requireTeacherSectionOwnership } from '../middleware/authorizeOwnership.js';
+import {
+  requireTeacherSectionOwnership,
+  requireStudentAccess,
+} from '../middleware/authorizeOwnership.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import * as attendanceController from '../controllers/attendanceController.js';
 
@@ -32,7 +35,8 @@ router.get(
 router.get(
   '/summary/student/:studentId',
   authenticateToken,
-  requireRoles('ADMIN', 'TEACHER'),
+  requireRoles('ADMIN', 'TEACHER', 'GUARDIAN'),
+  requireStudentAccess('studentId'),
   asyncHandler(attendanceController.getStudentSummary)
 );
 

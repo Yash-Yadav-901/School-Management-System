@@ -19,6 +19,37 @@ export async function recordBulkAttendance(sectionId, date, session, entries, re
     throw new AppError(400, 'VALIDATION_ERROR', `These student IDs do not belong to section ${sectionId}: ${ids}.`);
   }
 
+  // Check for existing records to track updates and store previousStatus in audit log
+  const existingRecords = await prisma.attendance.findMany({
+    where: {
+      date,
+      session: session.toUpperCase(),
+      studentId: { in: entries.map((e) => Number(e.studentId)) },
+    },
+    select: { studentId: true, status: true },
+  });
+
+  const existingMap = new Map(existingRecords.map((r) => [r.studentId, r.status]));
+  const updates = [];
+  const creates = [];
+
+  for (const entry of entries) {
+    const sId = Number(entry.studentId);
+    const newStatus = entry.status.toUpperCase();
+    if (existingMap.has(sId)) {
+      updates.push({
+        studentId: sId,
+        previousStatus: existingMap.get(sId),
+        newStatus,
+      });
+    } else {
+      creates.push({
+        studentId: sId,
+        newStatus,
+      });
+    }
+  }
+
   const upserts = entries.map((entry) =>
     prisma.attendance.upsert({
       where: {
@@ -42,10 +73,16 @@ export async function recordBulkAttendance(sectionId, date, session, entries, re
   const auditEntry = prisma.auditLog.create({
     data: {
       userId: recordedById,
-      action: 'ATTENDANCE_RECORDED',
+      action: updates.length > 0 ? 'ATTENDANCE_UPDATED' : 'ATTENDANCE_RECORDED',
       entityType: 'Section',
       entityId: Number(sectionId),
-      meta: JSON.stringify({ date, session, entriesCount: entries.length }),
+      meta: JSON.stringify({
+        date,
+        session: session.toUpperCase(),
+        entriesCount: entries.length,
+        updates,
+        creates,
+      }),
     },
   });
 

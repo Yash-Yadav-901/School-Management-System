@@ -12,6 +12,11 @@ export function validateBulkAttendanceInput(data) {
 
   if (!data.date || !DATE_PATTERN.test(String(data.date).trim())) {
     errors.push('Date is required and must be in YYYY-MM-DD format.');
+  } else {
+    const today = new Date().toISOString().slice(0, 10);
+    if (String(data.date).trim() > today) {
+      errors.push('Attendance date cannot be in the future.');
+    }
   }
 
   const session = String(data.session || '').toUpperCase();
