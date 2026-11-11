@@ -35,3 +35,4 @@ export function validateBulkAttendanceInput(data) {
 
   return errors;
 }
+

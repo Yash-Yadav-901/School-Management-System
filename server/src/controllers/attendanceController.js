@@ -31,3 +31,4 @@ export async function getStudentSummary(req, res) {
   const result = await attendanceService.getStudentAttendanceSummary(req.params.studentId, req.query);
   res.json(result);
 }
+
