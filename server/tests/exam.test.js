@@ -207,8 +207,9 @@ describe('Phase 5: Exams, Marks, and Report Cards', () => {
       });
       expect(dbResult.marksObtained).toBe(updatedMarks);
 
-      // Verify grade is null on DB row (computed dynamically at read time)
-      expect(dbResult.grade).toBeNull();
+      // Verify grade and gradePoint are dropped from DB row (computed dynamically at read time)
+      expect(dbResult.grade).toBeUndefined();
+      expect(dbResult.gradePoint).toBeUndefined();
 
       // Check audit log
       const audit = await prisma.auditLog.findFirst({

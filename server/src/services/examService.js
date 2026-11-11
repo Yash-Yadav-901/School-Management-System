@@ -212,7 +212,7 @@ export async function enterMarks(examId, entries, userContext) {
     }
   }
 
-  // Execute upserts — do NOT store grade or gradePoint statically; leave null
+  // Execute upserts — grades are computed dynamically on read from GradeRule
   const upserts = entries.map((entry) =>
     prisma.examResult.upsert({
       where: {
@@ -223,16 +223,12 @@ export async function enterMarks(examId, entries, userContext) {
       },
       update: {
         marksObtained: Number(entry.marksObtained),
-        grade: null,
-        gradePoint: null,
         calculatedAt: new Date(),
       },
       create: {
         examId: numExamId,
         studentId: Number(entry.studentId),
         marksObtained: Number(entry.marksObtained),
-        grade: null,
-        gradePoint: null,
       },
     })
   );

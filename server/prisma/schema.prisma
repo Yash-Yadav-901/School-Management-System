@@ -195,14 +195,12 @@ model Exam {
   @@map("exams")
 }
 
-// Unique per exam+student. grade and gradePoint are computed on save.
+// Unique per exam+student. Grades are computed dynamically from GradeRule on read.
 model ExamResult {
   id            Int      @id @default(autoincrement())
   examId        Int      @map("exam_id")
   studentId     Int      @map("student_id")
   marksObtained Int      @map("marks_obtained")
-  grade         String?
-  gradePoint    Float?   @map("grade_point")
   calculatedAt  DateTime @default(now()) @map("calculated_at")
 
   exam    Exam    @relation(fields: [examId], references: [id])

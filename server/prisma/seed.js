@@ -181,9 +181,7 @@ async function main() {
   ];
 
   for (const r of rawResults) {
-    const exam = r.examId === mathExam.id ? mathExam : sciExam;
-    const { grade, gradePoint } = applyGrade(r.marksObtained, exam.maxMarks);
-    await prisma.examResult.create({ data: { ...r, grade, gradePoint } });
+    await prisma.examResult.create({ data: r });
   }
 
   // ── Fee types ──────────────────────────────────────────────────────────────
