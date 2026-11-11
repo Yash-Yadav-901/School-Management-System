@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config/index.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import authRoutes from './routes/auth.js';
 
 const app = express();
 
@@ -28,9 +29,8 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes are mounted here progressively in later phases.
+app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
 
 export default app;
-
