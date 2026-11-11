@@ -30,6 +30,14 @@ router.get(
   asyncHandler(examController.getExam)
 );
 
+// Delete exam — ADMIN only (rejects with 409 if results exist)
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRoles('ADMIN'),
+  asyncHandler(examController.deleteExam)
+);
+
 // Enter / update marks — ADMIN and assigned TEACHER (verified in service)
 router.post(
   '/:id/marks',

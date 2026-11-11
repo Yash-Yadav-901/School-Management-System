@@ -20,6 +20,11 @@ export async function getExam(req, res) {
   res.json(exam);
 }
 
+export async function deleteExam(req, res) {
+  await examService.deleteExam(req.params.id);
+  res.json({ success: true, message: 'Exam deleted successfully.' });
+}
+
 export async function enterMarks(req, res) {
   const errors = validateMarksEntryInput(req.body);
   if (errors.length > 0) throw new AppError(400, 'VALIDATION_ERROR', 'Invalid marks input.', errors);

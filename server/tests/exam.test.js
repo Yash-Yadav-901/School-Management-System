@@ -152,7 +152,8 @@ describe('Phase 5: Exams, Marks, and Report Cards', () => {
       expect(res.body.error).toBe('VALIDATION_ERROR');
     });
 
-    it('rejects students not in the exam section → 400 VALIDATION_ERROR', async () => {
+    it('student from another section rejected with 400 on marks entry', async () => {
+      // priyaStudent is in Grade 10-A, createdExamId is in Grade 9-A
       const entries = [{ studentId: priyaStudent.id, marksObtained: 80 }];
 
       const res = await request(app)
@@ -162,6 +163,17 @@ describe('Phase 5: Exams, Marks, and Report Cards', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('VALIDATION_ERROR');
+      expect(res.body.message).toContain('not in section');
+    });
+
+    it('deleting an exam with results returns 409 CONFLICT', async () => {
+      const res = await request(app)
+        .delete(`/api/exams/${createdExamId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('CONFLICT');
+      expect(res.body.message).toContain('Cannot delete exam because student results exist for it');
     });
 
     it('one result per student per exam; update upserts with audit entry', async () => {
@@ -320,6 +332,26 @@ describe('Phase 5: Exams, Marks, and Report Cards', () => {
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('NOT_FOUND');
       expect(res.body.message).toBe('Student record not found.');
+    });
+
+    it('teacher cannot view report card of a student outside their sections → 403', async () => {
+      // teacher2 is assigned to Grade 10, not Grade 9-A where rahulStudent is enrolled
+      const res = await request(app)
+        .get(`/api/exams/report-card/${rahulStudent.id}`)
+        .set('Authorization', `Bearer ${teacher2Token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('FORBIDDEN');
+    });
+
+    it('teacher can view report card of a student in their assigned section → 200', async () => {
+      // teacher1 teaches Grade 9-A where rahulStudent is enrolled
+      const res = await request(app)
+        .get(`/api/exams/report-card/${rahulStudent.id}`)
+        .set('Authorization', `Bearer ${teacher1Token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.student.id).toBe(rahulStudent.id);
     });
   });
 });

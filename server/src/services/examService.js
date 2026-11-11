@@ -108,6 +108,24 @@ export async function getExamById(id) {
   return { ...exam, results: enrichedResults };
 }
 
+export async function deleteExam(id) {
+  const numId = Number(id);
+  const exam = await prisma.exam.findUnique({
+    where: { id: numId },
+    include: { _count: { select: { results: true } } },
+  });
+
+  if (!exam) throw new AppError(404, 'NOT_FOUND', 'Exam not found.');
+
+  if (exam._count.results > 0) {
+    throw new AppError(409, 'CONFLICT', 'Cannot delete exam because student results exist for it.');
+  }
+
+  return prisma.exam.delete({
+    where: { id: numId },
+  });
+}
+
 export async function enterMarks(examId, entries, userContext) {
   const numExamId = Number(examId);
   const exam = await prisma.exam.findUnique({
