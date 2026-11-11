@@ -2,8 +2,7 @@ import { AppError } from '../utils/AppError.js';
 import { logger } from '../utils/logger.js';
 
 // Every error response has the same shape regardless of where it originated.
-// Prisma's P2002 (unique constraint) is mapped to 409 CONFLICT here so callers
-// never see a raw Prisma error code.
+// Prisma constraint errors are mapped to 409 CONFLICT so callers never see raw Prisma errors.
 export function errorHandler(err, req, res, next) {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
@@ -17,6 +16,14 @@ export function errorHandler(err, req, res, next) {
     return res.status(409).json({
       error: 'CONFLICT',
       message: 'A record with that value already exists.',
+      details: [],
+    });
+  }
+
+  if (err.code === 'P2003') {
+    return res.status(409).json({
+      error: 'CONFLICT',
+      message: 'Cannot delete or modify this record because dependent records exist.',
       details: [],
     });
   }
@@ -36,4 +43,3 @@ export function errorHandler(err, req, res, next) {
     details: [],
   });
 }
-
