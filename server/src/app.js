@@ -10,6 +10,7 @@ import adminAcademicRoutes from './routes/adminAcademic.js';
 import attendanceRoutes from './routes/attendance.js';
 import studentRoutes from './routes/student.js';
 import examRoutes from './routes/exam.js';
+import feeRoutes from './routes/fee.js';
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/admin', adminAcademicRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/exams', examRoutes);
+app.use('/api/fees', feeRoutes);
 
 app.use(errorHandler);
 
