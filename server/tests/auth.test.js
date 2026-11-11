@@ -190,22 +190,23 @@ describe('Phase 2: Authentication & Authorization', () => {
     });
   });
 
-  describe('Guardian student ownership and privacy (403 vs 404 rule)', () => {
+  describe('Guardian student ownership and privacy on student routes (403 vs 404 rule)', () => {
     it('grants 200 access when guardian requests their linked student', async () => {
       // guardian1 is linked to Rahul Singh
       const res = await request(app)
-        .get(`/api/auth/verify-guardian-student/${rahulSingh.id}`)
+        .get(`/api/students/${rahulSingh.id}`)
         .set('Authorization', `Bearer ${guardian1Token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.studentId).toBe(rahulSingh.id);
+      expect(res.body.id).toBe(rahulSingh.id);
+      expect(res.body.name).toBe('Rahul Singh');
     });
 
     it('returns 404 when guardian requests another guardian child to protect privacy', async () => {
       // guardian1 is NOT linked to Priya Verma (guardian2's child)
       // Must return 404 rather than 403 to prevent enumeration/leaking existence
       const res = await request(app)
-        .get(`/api/auth/verify-guardian-student/${priyaVerma.id}`)
+        .get(`/api/students/${priyaVerma.id}`)
         .set('Authorization', `Bearer ${guardian1Token}`);
 
       expect(res.status).toBe(404);
@@ -214,6 +215,15 @@ describe('Phase 2: Authentication & Authorization', () => {
         message: 'Student record not found.',
         details: [],
       });
+    });
+
+    it('returns 403 when teacher tries to access guardian student endpoint', async () => {
+      const res = await request(app)
+        .get(`/api/students/${rahulSingh.id}`)
+        .set('Authorization', `Bearer ${teacher1Token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('FORBIDDEN');
     });
   });
 });

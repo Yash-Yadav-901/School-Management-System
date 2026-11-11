@@ -25,7 +25,7 @@ const loginLimiter = rateLimit({
 router.post('/login', loginLimiter, asyncHandler(authController.login));
 router.get('/me', authenticateToken, asyncHandler(authController.getMe));
 
-// Ownership verification routes
+// Ownership verification routes (legacy helper for teacher testing)
 router.get(
   '/verify-teacher-section/:sectionId',
   authenticateToken,
@@ -35,19 +35,6 @@ router.get(
     res.status(200).json({
       message: 'Access granted to section.',
       sectionId: Number(req.params.sectionId),
-    });
-  }
-);
-
-router.get(
-  '/verify-guardian-student/:studentId',
-  authenticateToken,
-  requireRoles('ADMIN', 'GUARDIAN'),
-  requireGuardianStudentOwnership('studentId'),
-  (req, res) => {
-    res.status(200).json({
-      message: 'Access granted to student.',
-      studentId: Number(req.params.studentId),
     });
   }
 );
