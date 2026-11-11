@@ -40,3 +40,4 @@ export function calcPercentage(marksObtained, maxMarks) {
   if (!maxMarks || maxMarks === 0) return 0;
   return (marksObtained / maxMarks) * 100;
 }
+

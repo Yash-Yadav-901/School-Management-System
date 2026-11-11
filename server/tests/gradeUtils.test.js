@@ -59,3 +59,4 @@ describe('calcPercentage — NaN prevention', () => {
     expect(calcPercentage(0, 100)).toBe(0);
   });
 });
+
