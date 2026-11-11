@@ -32,3 +32,4 @@ export async function getReportCard(req, res) {
   const reportCard = await examService.getStudentReportCard(req.params.studentId);
   res.json(reportCard);
 }
+

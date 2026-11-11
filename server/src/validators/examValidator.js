@@ -51,3 +51,4 @@ export function validateMarksEntryInput(data, maxMarks) {
 
   return errors;
 }
+
