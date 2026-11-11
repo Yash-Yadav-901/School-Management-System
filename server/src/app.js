@@ -7,6 +7,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import adminAcademicRoutes from './routes/adminAcademic.js';
+import attendanceRoutes from './routes/attendance.js';
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminAcademicRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 app.use(errorHandler);
 
