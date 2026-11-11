@@ -81,6 +81,19 @@ describe('Phase 2: Authentication & Authorization', () => {
       });
     });
 
+    it('rejects with 401 and the same error message when email does not exist', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'nonexistent@school.demo', password: 'AnyPassword123' });
+
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({
+        error: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password.',
+        details: [],
+      });
+    });
+
     it('rejects with 400 when email or password is empty or invalid', async () => {
       const res = await request(app)
         .post('/api/auth/login')

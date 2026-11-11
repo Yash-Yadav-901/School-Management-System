@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import * as authController from '../controllers/authController.js';
 import { authenticateToken, requireRoles } from '../middleware/auth.js';
@@ -9,7 +10,19 @@ import {
 
 const router = express.Router();
 
-router.post('/login', asyncHandler(authController.login));
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 100 : 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many login attempts. Please try again later.',
+    details: [],
+  },
+});
+
+router.post('/login', loginLimiter, asyncHandler(authController.login));
 router.get('/me', authenticateToken, asyncHandler(authController.getMe));
 
 // Ownership verification routes
