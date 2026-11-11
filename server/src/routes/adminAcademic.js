@@ -61,3 +61,4 @@ router.post('/guardian-students', asyncHandler(academicController.createGuardian
 router.delete('/guardian-students/:id', asyncHandler(academicController.deleteGuardianStudent));
 
 export default router;
+
