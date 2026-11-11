@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A login account. role is one of: ADMIN | TEACHER | GUARDIAN
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  role         String
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  teacher             Teacher?
+  guardian            Guardian?
+  auditLogs           AuditLog[]
+  recordedAttendances Attendance[]
+
+  @@map("users")
+}
+
+model Guardian {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @unique @map("user_id")
+  name         String
+  phone        String?
+  relationship String    @default("Parent")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  students Student[]
+
+  @@map("guardians")
+}
+
+model Teacher {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  name      String
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id])
+  classSubjects ClassSubject[]
+
+  @@map("teachers")
+}
+
+// name + section must be unique: "Grade 10" + "A"
+model Class {
+  id        Int      @id @default(autoincrement())
+  name      String
+  section   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  students      Student[]
+  classSubjects ClassSubject[]
+  exams         Exam[]
+
+  @@unique([name, section])
+  @@map("classes")
+}
+
+model Subject {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  classSubjects ClassSubject[]
+  exams         Exam[]
+
+  @@map("subjects")
+}
+
+// Links one teacher to one subject within one class.
+// A class cannot have the same subject assigned twice.
+model ClassSubject {
+  id        Int @id @default(autoincrement())
+  classId   Int @map("class_id")
+  subjectId Int @map("subject_id")
+  teacherId Int @map("teacher_id")
+
+  class   Class   @relation(fields: [classId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+
+  @@unique([classId, subjectId])
+  @@index([teacherId])
+  @@map("class_subjects")
+}
+
+model Student {
+  id         Int      @id @default(autoincrement())
+  name       String
+  dob        String? // YYYY-MM-DD
+  gender     String? // MALE | FEMALE | OTHER
+  rollNumber String?  @map("roll_number")
+  guardianId Int?     @map("guardian_id")
+  classId    Int?     @map("class_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  guardian    Guardian?    @relation(fields: [guardianId], references: [id])
+  class       Class?       @relation(fields: [classId], references: [id])
+  attendances Attendance[]
+  examResults ExamResult[]
+  feeInvoices FeeInvoice[]
+
+  @@index([classId])
+  @@index([guardianId])
+  @@map("students")
+}
+
+// Unique constraint on (studentId, date, session) prevents duplicates at the DB level.
+// session is MORNING | AFTERNOON. status is PRESENT | ABSENT | LATE.
+model Attendance {
+  id           Int      @id @default(autoincrement())
+  studentId    Int      @map("student_id")
+  date         String // YYYY-MM-DD
+  session      String // MORNING | AFTERNOON
+  status       String // PRESENT | ABSENT | LATE
+  recordedById Int      @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  student    Student @relation(fields: [studentId], references: [id])
+  recordedBy User    @relation(fields: [recordedById], references: [id])
+
+  @@unique([studentId, date, session])
+  @@index([date])
+  @@index([studentId])
+  @@map("attendance")
+}
+
+// Configurable grading bands. minPercent is inclusive, maxPercent is inclusive.
+model GradeRule {
+  id         Int    @id @default(autoincrement())
+  minPercent Float  @map("min_percent")
+  maxPercent Float  @map("max_percent")
+  grade      String
+  gradePoint Float  @map("grade_point")
+
+  @@map("grade_rules")
+}
+
+model Exam {
+  id        Int      @id @default(autoincrement())
+  name      String
+  classId   Int      @map("class_id")
+  subjectId Int      @map("subject_id")
+  maxMarks  Int      @map("max_marks")
+  examDate  String   @map("exam_date") // YYYY-MM-DD
+  createdAt DateTime @default(now()) @map("created_at")
+
+  class   Class       @relation(fields: [classId], references: [id])
+  subject Subject     @relation(fields: [subjectId], references: [id])
+  results ExamResult[]
+
+  @@index([classId])
+  @@map("exams")
+}
+
+// Unique per exam+student. grade and gradePoint are computed on save.
+model ExamResult {
+  id            Int      @id @default(autoincrement())
+  examId        Int      @map("exam_id")
+  studentId     Int      @map("student_id")
+  marksObtained Int      @map("marks_obtained")
+  grade         String?
+  gradePoint    Float?   @map("grade_point")
+  calculatedAt  DateTime @default(now()) @map("calculated_at")
+
+  exam    Exam    @relation(fields: [examId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([examId, studentId])
+  @@map("exam_results")
+}
+
+// Amounts are stored in integer paise (1 INR = 100 paise) to avoid floating-point rounding.
+model FeeType {
+  id            Int    @id @default(autoincrement())
+  name          String @unique
+  defaultAmount Int    @map("default_amount")
+
+  invoices FeeInvoice[]
+
+  @@map("fee_types")
+}
+
+// status transitions: UNPAID -> PARTIAL -> PAID, or UNPAID -> VOID.
+// Overpayment and payment on PAID/VOID invoices are rejected in the service layer.
+model FeeInvoice {
+  id        Int      @id @default(autoincrement())
+  studentId Int      @map("student_id")
+  feeTypeId Int      @map("fee_type_id")
+  amountDue Int      @map("amount_due")
+  dueDate   String   @map("due_date") // YYYY-MM-DD
+  status    String   @default("UNPAID") // UNPAID | PARTIAL | PAID | VOID
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  student  Student      @relation(fields: [studentId], references: [id])
+  feeType  FeeType      @relation(fields: [feeTypeId], references: [id])
+  payments FeePayment[]
+
+  @@index([studentId])
+  @@map("fee_invoices")
+}
+
+// idempotencyKey is unique: a repeated key returns the original payment instead of creating a second one.
+model FeePayment {
+  id             Int      @id @default(autoincrement())
+  invoiceId      Int      @map("invoice_id")
+  amountPaid     Int      @map("amount_paid")
+  idempotencyKey String   @unique @map("idempotency_key")
+  paidAt         DateTime @default(now()) @map("paid_at")
+
+  invoice FeeInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("fee_payments")
+}
+
+// Append-only audit trail for material business actions. meta is a JSON string.
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   Int      @map("entity_id")
+  meta       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
