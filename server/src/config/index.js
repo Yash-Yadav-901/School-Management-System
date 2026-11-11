@@ -17,3 +17,4 @@ export const config = {
   bcryptRounds: parseInt(getEnv('BCRYPT_ROUNDS', '10'), 10),
   corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:5173'),
 };
+
