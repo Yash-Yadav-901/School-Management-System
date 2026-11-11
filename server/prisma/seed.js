@@ -6,11 +6,13 @@ const prisma = new PrismaClient();
 // Delete all rows in dependency order (children before parents).
 async function clearDatabase() {
   await prisma.auditLog.deleteMany();
+  await prisma.feeLedgerEntry.deleteMany();
   await prisma.feePayment.deleteMany();
   await prisma.feeInvoice.deleteMany();
   await prisma.examResult.deleteMany();
   await prisma.attendance.deleteMany();
   await prisma.classSubject.deleteMany();
+  await prisma.guardianStudent.deleteMany();
   await prisma.student.deleteMany();
   await prisma.gradeRule.deleteMany();
   await prisma.feeType.deleteMany();
@@ -19,6 +21,7 @@ async function clearDatabase() {
   await prisma.guardian.deleteMany();
   await prisma.user.deleteMany();
   await prisma.subject.deleteMany();
+  await prisma.section.deleteMany();
   await prisma.class.deleteMany();
 }
 
@@ -56,15 +59,20 @@ async function main() {
   ]);
 
   const [guardian1, guardian2] = await prisma.$transaction([
-    prisma.guardian.create({ data: { userId: g1User.id, name: 'Amit Singh', phone: '9876543212', relationship: 'Father' } }),
-    prisma.guardian.create({ data: { userId: g2User.id, name: 'Sunita Verma', phone: '9876543213', relationship: 'Mother' } }),
+    prisma.guardian.create({ data: { userId: g1User.id, name: 'Amit Singh', phone: '9876543212' } }),
+    prisma.guardian.create({ data: { userId: g2User.id, name: 'Sunita Verma', phone: '9876543213' } }),
   ]);
 
-  // ── Classes ────────────────────────────────────────────────────────────────
-  const [cls9A, cls10A, cls10B] = await prisma.$transaction([
-    prisma.class.create({ data: { name: 'Grade 9', section: 'A' } }),
-    prisma.class.create({ data: { name: 'Grade 10', section: 'A' } }),
-    prisma.class.create({ data: { name: 'Grade 10', section: 'B' } }),
+  // ── Classes and Sections ───────────────────────────────────────────────────
+  const [clsGrade9, clsGrade10] = await prisma.$transaction([
+    prisma.class.create({ data: { name: 'Grade 9' } }),
+    prisma.class.create({ data: { name: 'Grade 10' } }),
+  ]);
+
+  const [sec9A, sec10A, sec10B] = await prisma.$transaction([
+    prisma.section.create({ data: { name: 'A', classId: clsGrade9.id } }),
+    prisma.section.create({ data: { name: 'A', classId: clsGrade10.id } }),
+    prisma.section.create({ data: { name: 'B', classId: clsGrade10.id } }),
   ]);
 
   // ── Subjects ───────────────────────────────────────────────────────────────
@@ -76,41 +84,51 @@ async function main() {
   ]);
 
   // ── Class–Subject–Teacher assignments ─────────────────────────────────────
-  // teacher1 owns Grade 9-A for Math and Science.
-  // teacher2 owns Grade 10-A for Math and English, and Grade 10-B for History.
+  // teacher1 owns Section 9-A for Math and Science.
+  // teacher2 owns Section 10-A for Math and English, and Section 10-B for History.
   await prisma.classSubject.createMany({
     data: [
-      { classId: cls9A.id,  subjectId: math.id,    teacherId: teacher1.id },
-      { classId: cls9A.id,  subjectId: science.id,  teacherId: teacher1.id },
-      { classId: cls10A.id, subjectId: math.id,    teacherId: teacher2.id },
-      { classId: cls10A.id, subjectId: english.id, teacherId: teacher2.id },
-      { classId: cls10B.id, subjectId: history.id, teacherId: teacher2.id },
+      { sectionId: sec9A.id,  subjectId: math.id,    teacherId: teacher1.id },
+      { sectionId: sec9A.id,  subjectId: science.id, teacherId: teacher1.id },
+      { sectionId: sec10A.id, subjectId: math.id,    teacherId: teacher2.id },
+      { sectionId: sec10A.id, subjectId: english.id, teacherId: teacher2.id },
+      { sectionId: sec10B.id, subjectId: history.id, teacherId: teacher2.id },
     ],
   });
 
   // ── Students ───────────────────────────────────────────────────────────────
-  // guardian1 is linked to two Grade 9-A students.
-  // guardian2 is linked to two Grade 10-A students.
   const [s1, s2, s3] = await prisma.$transaction([
-    prisma.student.create({ data: { name: 'Rahul Singh',  dob: '2010-05-15', gender: 'MALE',   rollNumber: '9A01', guardianId: guardian1.id, classId: cls9A.id  } }),
-    prisma.student.create({ data: { name: 'Anjali Singh', dob: '2010-08-22', gender: 'FEMALE', rollNumber: '9A02', guardianId: guardian1.id, classId: cls9A.id  } }),
-    prisma.student.create({ data: { name: 'Ravi Patel',   dob: '2010-03-10', gender: 'MALE',   rollNumber: '9A03', classId: cls9A.id  } }),
+    prisma.student.create({ data: { name: 'Rahul Singh',  dob: '2010-05-15', gender: 'MALE',   rollNumber: '9A01', sectionId: sec9A.id } }),
+    prisma.student.create({ data: { name: 'Anjali Singh', dob: '2010-08-22', gender: 'FEMALE', rollNumber: '9A02', sectionId: sec9A.id } }),
+    prisma.student.create({ data: { name: 'Ravi Patel',   dob: '2010-03-10', gender: 'MALE',   rollNumber: '9A03', sectionId: sec9A.id } }),
   ]);
 
   const [s4, s5] = await prisma.$transaction([
-    prisma.student.create({ data: { name: 'Priya Verma', dob: '2009-11-30', gender: 'FEMALE', rollNumber: '10A01', guardianId: guardian2.id, classId: cls10A.id } }),
-    prisma.student.create({ data: { name: 'Karan Verma', dob: '2009-07-18', gender: 'MALE',   rollNumber: '10A02', guardianId: guardian2.id, classId: cls10A.id } }),
+    prisma.student.create({ data: { name: 'Priya Verma', dob: '2009-11-30', gender: 'FEMALE', rollNumber: '10A01', sectionId: sec10A.id } }),
+    prisma.student.create({ data: { name: 'Karan Verma', dob: '2009-07-18', gender: 'MALE',   rollNumber: '10A02', sectionId: sec10A.id } }),
   ]);
 
   const [s6, s7] = await prisma.$transaction([
-    prisma.student.create({ data: { name: 'Sneha Gupta',  dob: '2009-02-14', gender: 'FEMALE', rollNumber: '10B01', classId: cls10B.id } }),
-    prisma.student.create({ data: { name: 'Vikram Joshi', dob: '2009-09-05', gender: 'MALE',   rollNumber: '10B02', classId: cls10B.id } }),
+    prisma.student.create({ data: { name: 'Sneha Gupta',  dob: '2009-02-14', gender: 'FEMALE', rollNumber: '10B01', sectionId: sec10B.id } }),
+    prisma.student.create({ data: { name: 'Vikram Joshi', dob: '2009-09-05', gender: 'MALE',   rollNumber: '10B02', sectionId: sec10B.id } }),
   ]);
+
+  // ── Guardian–Student Link Table ───────────────────────────────────────────
+  // guardian1 linked to Rahul and Anjali
+  // guardian2 linked to Priya and Karan
+  await prisma.guardianStudent.createMany({
+    data: [
+      { guardianId: guardian1.id, studentId: s1.id, relationship: 'Father' },
+      { guardianId: guardian1.id, studentId: s2.id, relationship: 'Father' },
+      { guardianId: guardian2.id, studentId: s4.id, relationship: 'Mother' },
+      { guardianId: guardian2.id, studentId: s5.id, relationship: 'Mother' },
+    ],
+  });
 
   // ── Grade rules ────────────────────────────────────────────────────────────
   await prisma.gradeRule.createMany({
     data: [
-      { minPercent: 90,   maxPercent: 100,  grade: 'A+', gradePoint: 10 },
+      { minPercent: 90,   maxPercent: 100,   grade: 'A+', gradePoint: 10 },
       { minPercent: 80,   maxPercent: 89.99, grade: 'A',  gradePoint: 9  },
       { minPercent: 70,   maxPercent: 79.99, grade: 'B+', gradePoint: 8  },
       { minPercent: 60,   maxPercent: 69.99, grade: 'B',  gradePoint: 7  },
@@ -119,7 +137,7 @@ async function main() {
     ],
   });
 
-  // ── Attendance (last 5 school days for Grade 9-A) ─────────────────────────
+  // ── Attendance (last 5 school days for Section 9-A) ────────────────────────
   const dates = [-4, -3, -2, -1, 0].map(dateOffset);
   const students9A = [s1, s2, s3];
   const attendanceRows = [];
@@ -147,10 +165,10 @@ async function main() {
   }
 
   const mathExam = await prisma.exam.create({
-    data: { name: 'Mid-Term Mathematics', classId: cls9A.id, subjectId: math.id, maxMarks: 100, examDate: '2026-10-15' },
+    data: { name: 'Mid-Term Mathematics', sectionId: sec9A.id, subjectId: math.id, maxMarks: 100, examDate: '2026-10-15' },
   });
   const sciExam = await prisma.exam.create({
-    data: { name: 'Mid-Term Science', classId: cls9A.id, subjectId: science.id, maxMarks: 100, examDate: '2026-10-17' },
+    data: { name: 'Mid-Term Science', sectionId: sec9A.id, subjectId: science.id, maxMarks: 100, examDate: '2026-10-17' },
   });
 
   const rawResults = [
@@ -175,20 +193,30 @@ async function main() {
     prisma.feeType.create({ data: { name: 'Library Fee', defaultAmount: 50000  } }),
   ]);
 
-  // ── Fee invoices (all students get one tuition invoice) ────────────────────
+  // ── Fee invoices and ledger entries (DEBITS) ───────────────────────────────
   const allStudents = [s1, s2, s3, s4, s5, s6, s7];
   const invoices = [];
   for (const student of allStudents) {
     const inv = await prisma.feeInvoice.create({
       data: { studentId: student.id, feeTypeId: tuitionFee.id, amountDue: 500000, dueDate: '2026-11-30', status: 'UNPAID' },
     });
+    // Create DEBIT ledger entry for each invoice
+    await prisma.feeLedgerEntry.create({
+      data: {
+        studentId: student.id,
+        invoiceId: inv.id,
+        entryType: 'DEBIT',
+        amount: 500000,
+        description: 'Invoice generated: Tuition Fee',
+      },
+    });
     invoices.push({ student, inv });
   }
 
-  // Record one full payment for Rahul Singh so the fee ledger has real data.
+  // Record one full payment (CREDIT) for Rahul Singh in one transaction
   const rahulEntry = invoices.find((e) => e.student.id === s1.id);
   await prisma.$transaction(async (tx) => {
-    await tx.feePayment.create({
+    const payment = await tx.feePayment.create({
       data: {
         invoiceId: rahulEntry.inv.id,
         amountPaid: 500000,
@@ -198,6 +226,16 @@ async function main() {
     await tx.feeInvoice.update({
       where: { id: rahulEntry.inv.id },
       data: { status: 'PAID' },
+    });
+    await tx.feeLedgerEntry.create({
+      data: {
+        studentId: rahulEntry.student.id,
+        invoiceId: rahulEntry.inv.id,
+        paymentId: payment.id,
+        entryType: 'CREDIT',
+        amount: 500000,
+        description: 'Payment received: Tuition Fee',
+      },
     });
     await tx.auditLog.create({
       data: {
@@ -211,14 +249,13 @@ async function main() {
   });
 
   console.log('Seed complete.');
-  console.log('  Admin:    admin@school.demo    / Admin@123');
-  console.log('  Teacher1: teacher1@school.demo / Teacher@123  (Grade 9-A: Math, Science)');
-  console.log('  Teacher2: teacher2@school.demo / Teacher@123  (Grade 10-A/B)');
-  console.log('  Guardian1: guardian1@school.demo / Guardian@123  (Rahul & Anjali)');
-  console.log('  Guardian2: guardian2@school.demo / Guardian@123  (Priya & Karan)');
+  console.log('  Admin:     admin@school.demo    / Admin@123');
+  console.log('  Teacher1:  teacher1@school.demo / Teacher@123  (Grade 9-A: Math, Science)');
+  console.log('  Teacher2:  teacher2@school.demo / Teacher@123  (Grade 10-A: Math, English | Grade 10-B: History)');
+  console.log('  Guardian1: guardian1@school.demo / Guardian@123  (Rahul & Anjali Singh)');
+  console.log('  Guardian2: guardian2@school.demo / Guardian@123  (Priya & Karan Verma)');
 }
 
 main()
   .catch((e) => { console.error('Seed failed:', e); process.exit(1); })
   .finally(() => prisma.$disconnect());
-

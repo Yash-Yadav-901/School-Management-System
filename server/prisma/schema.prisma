@@ -25,16 +25,15 @@ model User {
 }
 
 model Guardian {
-  id           Int       @id @default(autoincrement())
-  userId       Int       @unique @map("user_id")
-  name         String
-  phone        String?
-  relationship String    @default("Parent")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  name      String
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id])
-  students Student[]
+  user             User              @relation(fields: [userId], references: [id])
+  guardianStudents GuardianStudent[]
 
   @@map("guardians")
 }
@@ -53,19 +52,32 @@ model Teacher {
   @@map("teachers")
 }
 
-// name + section must be unique: "Grade 10" + "A"
+// Academic Class / Grade level (e.g. "Grade 9", "Grade 10")
 model Class {
   id        Int      @id @default(autoincrement())
-  name      String
-  section   String
+  name      String   @unique
   createdAt DateTime @default(now()) @map("created_at")
 
+  sections Section[]
+
+  @@map("classes")
+}
+
+// Section within a class (e.g. "A", "B").
+// Unique constraint on (classId, name) ensures Grade 10 cannot have two 'A' sections.
+model Section {
+  id        Int      @id @default(autoincrement())
+  name      String
+  classId   Int      @map("class_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  class         Class          @relation(fields: [classId], references: [id])
   students      Student[]
   classSubjects ClassSubject[]
   exams         Exam[]
 
-  @@unique([name, section])
-  @@map("classes")
+  @@unique([classId, name])
+  @@map("sections")
 }
 
 model Subject {
@@ -80,19 +92,18 @@ model Subject {
   @@map("subjects")
 }
 
-// Links one teacher to one subject within one class.
-// A class cannot have the same subject assigned twice.
+// Links one teacher to one subject within one class section.
 model ClassSubject {
   id        Int @id @default(autoincrement())
-  classId   Int @map("class_id")
+  sectionId Int @map("section_id")
   subjectId Int @map("subject_id")
   teacherId Int @map("teacher_id")
 
-  class   Class   @relation(fields: [classId], references: [id])
+  section Section @relation(fields: [sectionId], references: [id])
   subject Subject @relation(fields: [subjectId], references: [id])
   teacher Teacher @relation(fields: [teacherId], references: [id])
 
-  @@unique([classId, subjectId])
+  @@unique([sectionId, subjectId])
   @@index([teacherId])
   @@map("class_subjects")
 }
@@ -103,20 +114,36 @@ model Student {
   dob        String? // YYYY-MM-DD
   gender     String? // MALE | FEMALE | OTHER
   rollNumber String?  @map("roll_number")
-  guardianId Int?     @map("guardian_id")
-  classId    Int?     @map("class_id")
+  sectionId  Int?     @map("section_id")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  guardian    Guardian?    @relation(fields: [guardianId], references: [id])
-  class       Class?       @relation(fields: [classId], references: [id])
-  attendances Attendance[]
-  examResults ExamResult[]
-  feeInvoices FeeInvoice[]
+  section          Section?          @relation(fields: [sectionId], references: [id])
+  guardianStudents GuardianStudent[]
+  attendances      Attendance[]
+  examResults      ExamResult[]
+  feeInvoices      FeeInvoice[]
+  feeLedgerEntries FeeLedgerEntry[]
 
-  @@index([classId])
-  @@index([guardianId])
+  @@index([sectionId])
   @@map("students")
+}
+
+// Explicit join table linking guardians to students with relationship type.
+model GuardianStudent {
+  id           Int      @id @default(autoincrement())
+  guardianId   Int      @map("guardian_id")
+  studentId    Int      @map("student_id")
+  relationship String   @default("Parent") // Father, Mother, Guardian, etc.
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianId, studentId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@map("guardian_students")
 }
 
 // Unique constraint on (studentId, date, session) prevents duplicates at the DB level.
@@ -154,17 +181,17 @@ model GradeRule {
 model Exam {
   id        Int      @id @default(autoincrement())
   name      String
-  classId   Int      @map("class_id")
+  sectionId Int      @map("section_id")
   subjectId Int      @map("subject_id")
   maxMarks  Int      @map("max_marks")
   examDate  String   @map("exam_date") // YYYY-MM-DD
   createdAt DateTime @default(now()) @map("created_at")
 
-  class   Class       @relation(fields: [classId], references: [id])
-  subject Subject     @relation(fields: [subjectId], references: [id])
+  section Section      @relation(fields: [sectionId], references: [id])
+  subject Subject      @relation(fields: [subjectId], references: [id])
   results ExamResult[]
 
-  @@index([classId])
+  @@index([sectionId])
   @@map("exams")
 }
 
@@ -197,7 +224,6 @@ model FeeType {
 }
 
 // status transitions: UNPAID -> PARTIAL -> PAID, or UNPAID -> VOID.
-// Overpayment and payment on PAID/VOID invoices are rejected in the service layer.
 model FeeInvoice {
   id        Int      @id @default(autoincrement())
   studentId Int      @map("student_id")
@@ -208,9 +234,10 @@ model FeeInvoice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  student  Student      @relation(fields: [studentId], references: [id])
-  feeType  FeeType      @relation(fields: [feeTypeId], references: [id])
-  payments FeePayment[]
+  student       Student          @relation(fields: [studentId], references: [id])
+  feeType       FeeType          @relation(fields: [feeTypeId], references: [id])
+  payments      FeePayment[]
+  ledgerEntries FeeLedgerEntry[]
 
   @@index([studentId])
   @@map("fee_invoices")
@@ -224,10 +251,32 @@ model FeePayment {
   idempotencyKey String   @unique @map("idempotency_key")
   paidAt         DateTime @default(now()) @map("paid_at")
 
-  invoice FeeInvoice @relation(fields: [invoiceId], references: [id])
+  invoice       FeeInvoice       @relation(fields: [invoiceId], references: [id])
+  ledgerEntries FeeLedgerEntry[]
 
   @@index([invoiceId])
   @@map("fee_payments")
+}
+
+// Student Fee Ledger: records financial debits (invoice raised) and credits (payment made).
+// Used to compute running balances and reconcile fee totals with the ledger.
+model FeeLedgerEntry {
+  id          Int      @id @default(autoincrement())
+  studentId   Int      @map("student_id")
+  invoiceId   Int?     @map("invoice_id")
+  paymentId   Int?     @map("payment_id")
+  entryType   String   @map("entry_type") // DEBIT | CREDIT
+  amount      Int // amount in paise
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  student Student     @relation(fields: [studentId], references: [id])
+  invoice FeeInvoice? @relation(fields: [invoiceId], references: [id])
+  payment FeePayment? @relation(fields: [paymentId], references: [id])
+
+  @@index([studentId])
+  @@index([createdAt])
+  @@map("fee_ledger_entries")
 }
 
 // Append-only audit trail for material business actions. meta is a JSON string.
@@ -247,4 +296,3 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
-

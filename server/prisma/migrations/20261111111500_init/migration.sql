@@ -14,7 +14,6 @@ CREATE TABLE "guardians" (
     "user_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "phone" TEXT,
-    "relationship" TEXT NOT NULL DEFAULT 'Parent',
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "guardians_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
@@ -35,8 +34,16 @@ CREATE TABLE "teachers" (
 CREATE TABLE "classes" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "name" TEXT NOT NULL,
-    "section" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "sections" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "class_id" INTEGER NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "sections_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classes" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -50,10 +57,10 @@ CREATE TABLE "subjects" (
 -- CreateTable
 CREATE TABLE "class_subjects" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "class_id" INTEGER NOT NULL,
+    "section_id" INTEGER NOT NULL,
     "subject_id" INTEGER NOT NULL,
     "teacher_id" INTEGER NOT NULL,
-    CONSTRAINT "class_subjects_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classes" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "class_subjects_section_id_fkey" FOREIGN KEY ("section_id") REFERENCES "sections" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "class_subjects_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subjects" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "class_subjects_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "teachers" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -65,12 +72,21 @@ CREATE TABLE "students" (
     "dob" TEXT,
     "gender" TEXT,
     "roll_number" TEXT,
-    "guardian_id" INTEGER,
-    "class_id" INTEGER,
+    "section_id" INTEGER,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "students_guardian_id_fkey" FOREIGN KEY ("guardian_id") REFERENCES "guardians" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "students_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classes" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "students_section_id_fkey" FOREIGN KEY ("section_id") REFERENCES "sections" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "guardian_students" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "guardian_id" INTEGER NOT NULL,
+    "student_id" INTEGER NOT NULL,
+    "relationship" TEXT NOT NULL DEFAULT 'Parent',
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "guardian_students_guardian_id_fkey" FOREIGN KEY ("guardian_id") REFERENCES "guardians" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "guardian_students_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "students" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -100,12 +116,12 @@ CREATE TABLE "grade_rules" (
 CREATE TABLE "exams" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "name" TEXT NOT NULL,
-    "class_id" INTEGER NOT NULL,
+    "section_id" INTEGER NOT NULL,
     "subject_id" INTEGER NOT NULL,
     "max_marks" INTEGER NOT NULL,
     "exam_date" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "exams_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classes" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "exams_section_id_fkey" FOREIGN KEY ("section_id") REFERENCES "sections" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "exams_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subjects" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -154,6 +170,21 @@ CREATE TABLE "fee_payments" (
 );
 
 -- CreateTable
+CREATE TABLE "fee_ledger_entries" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "student_id" INTEGER NOT NULL,
+    "invoice_id" INTEGER,
+    "payment_id" INTEGER,
+    "entry_type" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "description" TEXT NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "fee_ledger_entries_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "students" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "fee_ledger_entries_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "fee_invoices" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "fee_ledger_entries_payment_id_fkey" FOREIGN KEY ("payment_id") REFERENCES "fee_payments" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "audit_logs" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "user_id" INTEGER NOT NULL,
@@ -175,7 +206,10 @@ CREATE UNIQUE INDEX "guardians_user_id_key" ON "guardians"("user_id");
 CREATE UNIQUE INDEX "teachers_user_id_key" ON "teachers"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "classes_name_section_key" ON "classes"("name", "section");
+CREATE UNIQUE INDEX "classes_name_key" ON "classes"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sections_class_id_name_key" ON "sections"("class_id", "name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "subjects_code_key" ON "subjects"("code");
@@ -184,13 +218,19 @@ CREATE UNIQUE INDEX "subjects_code_key" ON "subjects"("code");
 CREATE INDEX "class_subjects_teacher_id_idx" ON "class_subjects"("teacher_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "class_subjects_class_id_subject_id_key" ON "class_subjects"("class_id", "subject_id");
+CREATE UNIQUE INDEX "class_subjects_section_id_subject_id_key" ON "class_subjects"("section_id", "subject_id");
 
 -- CreateIndex
-CREATE INDEX "students_class_id_idx" ON "students"("class_id");
+CREATE INDEX "students_section_id_idx" ON "students"("section_id");
 
 -- CreateIndex
-CREATE INDEX "students_guardian_id_idx" ON "students"("guardian_id");
+CREATE INDEX "guardian_students_student_id_idx" ON "guardian_students"("student_id");
+
+-- CreateIndex
+CREATE INDEX "guardian_students_guardian_id_idx" ON "guardian_students"("guardian_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "guardian_students_guardian_id_student_id_key" ON "guardian_students"("guardian_id", "student_id");
 
 -- CreateIndex
 CREATE INDEX "attendance_date_idx" ON "attendance"("date");
@@ -202,7 +242,7 @@ CREATE INDEX "attendance_student_id_idx" ON "attendance"("student_id");
 CREATE UNIQUE INDEX "attendance_student_id_date_session_key" ON "attendance"("student_id", "date", "session");
 
 -- CreateIndex
-CREATE INDEX "exams_class_id_idx" ON "exams"("class_id");
+CREATE INDEX "exams_section_id_idx" ON "exams"("section_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "exam_results_exam_id_student_id_key" ON "exam_results"("exam_id", "student_id");
@@ -218,6 +258,12 @@ CREATE UNIQUE INDEX "fee_payments_idempotency_key_key" ON "fee_payments"("idempo
 
 -- CreateIndex
 CREATE INDEX "fee_payments_invoice_id_idx" ON "fee_payments"("invoice_id");
+
+-- CreateIndex
+CREATE INDEX "fee_ledger_entries_student_id_idx" ON "fee_ledger_entries"("student_id");
+
+-- CreateIndex
+CREATE INDEX "fee_ledger_entries_created_at_idx" ON "fee_ledger_entries"("created_at");
 
 -- CreateIndex
 CREATE INDEX "audit_logs_entity_type_entity_id_idx" ON "audit_logs"("entity_type", "entity_id");
