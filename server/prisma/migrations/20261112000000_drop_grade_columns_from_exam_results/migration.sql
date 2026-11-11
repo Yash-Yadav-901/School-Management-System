@@ -16,3 +16,4 @@ ALTER TABLE "new_exam_results" RENAME TO "exam_results";
 CREATE UNIQUE INDEX "exam_results_exam_id_student_id_key" ON "exam_results"("exam_id", "student_id");
 PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
+

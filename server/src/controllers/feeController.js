@@ -65,3 +65,4 @@ export async function getAdminFeeReport(req, res) {
   const report = await feeService.getAdminFeeReport();
   res.json(report);
 }
+
