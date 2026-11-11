@@ -104,6 +104,28 @@ describe('Phase 2: Authentication & Authorization', () => {
       expect(res.body.details).toContain('A valid email address is required.');
       expect(res.body.details).toContain('Password is required.');
     });
+
+    it('exceeds the login rate limit and returns 429 with standard error shape', async () => {
+      let rateLimitedRes = null;
+      for (let i = 0; i < 30; i++) {
+        const res = await request(app)
+          .post('/api/auth/login')
+          .send({ email: 'rate.test@school.demo', password: 'AnyPassword123' });
+
+        if (res.status === 429) {
+          rateLimitedRes = res;
+          break;
+        }
+      }
+
+      expect(rateLimitedRes).not.toBeNull();
+      expect(rateLimitedRes.status).toBe(429);
+      expect(rateLimitedRes.body).toEqual({
+        error: 'TOO_MANY_REQUESTS',
+        message: 'Too many login attempts. Please try again later.',
+        details: [],
+      });
+    });
   });
 
   describe('JWT authentication middleware', () => {

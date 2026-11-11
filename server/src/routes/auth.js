@@ -12,13 +12,19 @@ const router = express.Router();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 100 : 5,
+  max: process.env.LOGIN_RATE_LIMIT
+    ? Number(process.env.LOGIN_RATE_LIMIT)
+    : process.env.NODE_ENV === 'test'
+      ? 25
+      : 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    error: 'TOO_MANY_REQUESTS',
-    message: 'Too many login attempts. Please try again later.',
-    details: [],
+  handler: (_req, res) => {
+    res.status(429).json({
+      error: 'TOO_MANY_REQUESTS',
+      message: 'Too many login attempts. Please try again later.',
+      details: [],
+    });
   },
 });
 
