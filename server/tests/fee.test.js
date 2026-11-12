@@ -687,5 +687,101 @@ describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
       expect(creditCount).toBe(1);
     });
   });
+
+  describe('Invoice status-ledger consistency and bulk atomicity', () => {
+    it('invoice status always matches ledger balance after every transition', async () => {
+      const invRes = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 30000, dueDate: '2027-05-01' });
+      const invId = invRes.body.id;
+
+      // UNPAID: balance should equal amountDue
+      let detail = await request(app).get(`/api/fees/invoices/${invId}`).set('Authorization', `Bearer ${adminToken}`);
+      expect(detail.body.status).toBe('UNPAID');
+      expect(detail.body.outstandingBalance).toBe(30000);
+
+      // Partial payment → PARTIAL
+      await request(app)
+        .post(`/api/fees/invoices/${invId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', `status-trans-1-${crypto.randomUUID()}`)
+        .send({ amountPaid: 10000 });
+
+      detail = await request(app).get(`/api/fees/invoices/${invId}`).set('Authorization', `Bearer ${adminToken}`);
+      expect(detail.body.status).toBe('PARTIAL');
+      expect(detail.body.outstandingBalance).toBe(20000);
+
+      // Full remaining payment → PAID
+      await request(app)
+        .post(`/api/fees/invoices/${invId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', `status-trans-2-${crypto.randomUUID()}`)
+        .send({ amountPaid: 20000 });
+
+      detail = await request(app).get(`/api/fees/invoices/${invId}`).set('Authorization', `Bearer ${adminToken}`);
+      expect(detail.body.status).toBe('PAID');
+      expect(detail.body.outstandingBalance).toBe(0);
+    });
+
+    it('bulk invoice creation is all-or-nothing (invalid section/student rolls back)', async () => {
+      const beforeCount = await prisma.feeInvoice.count();
+
+      // Use a non-existent section to trigger an error
+      const res = await request(app)
+        .post('/api/fees/invoices/bulk')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ sectionId: 999999, feeTypeId: tuitionFeeType.id, amountDue: 10000, dueDate: '2027-06-01' });
+
+      expect(res.status).toBe(404);
+
+      const afterCount = await prisma.feeInvoice.count();
+      expect(afterCount).toBe(beforeCount);
+    });
+
+    it('voiding a PAID invoice returns 409 CONFLICT', async () => {
+      // Create and fully pay
+      const invRes = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 5000, dueDate: '2027-07-01' });
+      const invId = invRes.body.id;
+
+      await request(app)
+        .post(`/api/fees/invoices/${invId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', `void-paid-${crypto.randomUUID()}`)
+        .send({ amountPaid: 5000 });
+
+      const voidRes = await request(app)
+        .post(`/api/fees/invoices/${invId}/void`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(voidRes.status).toBe(409);
+      expect(voidRes.body.error).toBe('CONFLICT');
+    });
+
+    it('voiding a VOID invoice returns 409 CONFLICT', async () => {
+      const invRes = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 7000, dueDate: '2027-07-02' });
+      const invId = invRes.body.id;
+
+      // Void it
+      await request(app)
+        .post(`/api/fees/invoices/${invId}/void`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Try voiding again
+      const voidRes = await request(app)
+        .post(`/api/fees/invoices/${invId}/void`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(voidRes.status).toBe(409);
+      expect(voidRes.body.error).toBe('CONFLICT');
+      expect(voidRes.body.message).toContain('already VOID');
+    });
+  });
 });
 

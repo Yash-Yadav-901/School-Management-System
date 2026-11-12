@@ -441,10 +441,14 @@ export async function voidInvoice(invoiceId, userId) {
     if (!invoice) throw new AppError(404, 'NOT_FOUND', 'Invoice not found.');
 
     if (invoice.status === 'VOID') {
-      throw new AppError(400, 'BAD_REQUEST', 'Invoice is already VOID.');
+      throw new AppError(409, 'CONFLICT', 'Invoice is already VOID.');
     }
 
-    // VOID is allowed only for invoices with NO payments
+    if (invoice.status === 'PAID') {
+      throw new AppError(409, 'CONFLICT', 'Cannot void a PAID invoice.');
+    }
+
+    // VOID is allowed only for invoices with NO payments (covers PARTIAL status)
     if (invoice._count.payments > 0) {
       throw new AppError(409, 'CONFLICT', 'Cannot void an invoice that already has recorded payments.');
     }
