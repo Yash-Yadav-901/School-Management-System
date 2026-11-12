@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { authenticateToken, requireRoles } from '../middleware/auth.js';
 import * as academicController from '../controllers/academicController.js';
 import * as gradeRuleController from '../controllers/gradeRuleController.js';
+import * as auditLogController from '../controllers/auditLogController.js';
 
 const router = express.Router();
 
@@ -67,6 +68,9 @@ router.post('/grade-rules', asyncHandler(gradeRuleController.createGradeRule));
 router.get('/grade-rules/:id', asyncHandler(gradeRuleController.getGradeRule));
 router.put('/grade-rules/:id', asyncHandler(gradeRuleController.updateGradeRule));
 router.delete('/grade-rules/:id', asyncHandler(gradeRuleController.deleteGradeRule));
+
+// ── Audit Logs ─────────────────────────────────────────────────────────────
+router.get('/audit-logs', asyncHandler(auditLogController.getAuditLogs));
 
 export default router;
 
