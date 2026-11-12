@@ -446,6 +446,22 @@ describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
   });
 
   describe('Reconciliation test: total invoiced minus total paid equals sum of all ledger entries', () => {
+    /**
+     * Void Invoice Treatment in Ledger Reconciliation:
+     * ────────────────────────────────────────────────
+     * When an invoice is created, a DEBIT ledger entry is recorded for `amountDue`.
+     * When an invoice is voided (only allowed with zero payments), a reversing CREDIT
+     * ledger entry is recorded for the full `amountDue`, completely neutralizing the debit.
+     *
+     * Net ledger impact of a VOID invoice:
+     *   DEBIT (amountDue) + CREDIT (-amountDue) = 0 paise
+     *
+     * Therefore, void invoices contribute 0 to the net outstanding balance.
+     * The independent reconciliation equation is:
+     *   SUM(non-void invoice amountDue) - SUM(all payments amountPaid)
+     *   === SUM(ledger DEBIT entries) - SUM(ledger CREDIT entries)
+     *   === net ledger balance
+     */
     it('ledger entries sum perfectly reconciles with totalInvoiced - totalPaid across the system', async () => {
       const reportRes = await request(app)
         .get('/api/fees/admin-report')
@@ -465,6 +481,63 @@ describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
       }
 
       expect(netLedger).toBe(outstandingBalance);
+    });
+
+    it('independent reconciliation with mix of paid, partial, unpaid, and void invoices', async () => {
+      // Create 4 invoices in different states
+      const makeInvoice = async (amount, dueDate) => {
+        const res = await request(app)
+          .post('/api/fees/invoices')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: amount, dueDate });
+        return res.body.id;
+      };
+
+      const unpaidId = await makeInvoice(10000, '2027-01-01');
+      const partialId = await makeInvoice(20000, '2027-01-02');
+      const paidId = await makeInvoice(15000, '2027-01-03');
+      const voidId = await makeInvoice(12000, '2027-01-04');
+
+      // Make partial payment
+      await request(app)
+        .post(`/api/fees/invoices/${partialId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', `recon-partial-${crypto.randomUUID()}`)
+        .send({ amountPaid: 8000 });
+
+      // Fully pay
+      await request(app)
+        .post(`/api/fees/invoices/${paidId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', `recon-full-${crypto.randomUUID()}`)
+        .send({ amountPaid: 15000 });
+
+      // Void
+      await request(app)
+        .post(`/api/fees/invoices/${voidId}/void`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // Now reconcile globally
+      const allEntries = await prisma.feeLedgerEntry.findMany();
+      let totalDebits = 0;
+      let totalCredits = 0;
+      for (const entry of allEntries) {
+        if (entry.entryType === 'DEBIT') totalDebits += entry.amount;
+        if (entry.entryType === 'CREDIT') totalCredits += entry.amount;
+      }
+
+      const allPayments = await prisma.feePayment.findMany();
+      const totalPaymentAmount = allPayments.reduce((sum, p) => sum + p.amountPaid, 0);
+
+      // Non-void invoices
+      const allInvoices = await prisma.feeInvoice.findMany();
+      const nonVoidInvoiceTotal = allInvoices
+        .filter((inv) => inv.status !== 'VOID')
+        .reduce((sum, inv) => sum + inv.amountDue, 0);
+
+      // Reconciliation identity: outstanding = nonVoidInvoiced - payments = net ledger
+      const netLedger = totalDebits - totalCredits;
+      expect(nonVoidInvoiceTotal - totalPaymentAmount).toBe(netLedger);
     });
   });
 
