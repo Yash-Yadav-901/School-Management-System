@@ -15,6 +15,7 @@ export const config = {
   jwtSecret: getEnv('JWT_SECRET'),
   jwtExpiresIn: getEnv('JWT_EXPIRES_IN', '7d'),
   bcryptRounds: parseInt(getEnv('BCRYPT_ROUNDS', '10'), 10),
-  corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:5173'),
+  clientOrigin: process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:5173',
+  corsOrigin: process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:5173',
 };
 

@@ -29,7 +29,22 @@ const swaggerDocument = YAML.load(openApiPath);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(helmet());
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+
+const allowedOrigins = Array.from(
+  new Set([config.clientOrigin, config.corsOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean))
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(requestLogger);
 
