@@ -11,6 +11,7 @@ import attendanceRoutes from './routes/attendance.js';
 import studentRoutes from './routes/student.js';
 import examRoutes from './routes/exam.js';
 import feeRoutes from './routes/fee.js';
+import reportRoutes from './routes/report.js';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/fees', feeRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.use(errorHandler);
 
