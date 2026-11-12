@@ -280,23 +280,43 @@ export async function recordPayment(invoiceId, amountPaid, idempotencyKey, userC
     });
 
     if (existingPayment) {
-      // Compare payload
-      if (existingPayment.invoiceId === numInvoiceId && existingPayment.amountPaid === numAmountPaid) {
-        logger.info(`Duplicate idempotency key replayed: key=${cleanKey} paymentId=${existingPayment.id}`);
-        const { remainingBalance } = await computeInvoiceBalance(numInvoiceId, tx);
-        return {
-          isReplay: true,
-          message: 'Payment already processed with this idempotency key.',
-          payment: existingPayment,
-          invoiceStatus: existingPayment.invoice.status,
-          outstandingBalance: remainingBalance,
-        };
-      } else {
+      // Different payload (different invoice or amount) → always 409, never leak original details
+      if (existingPayment.invoiceId !== numInvoiceId || existingPayment.amountPaid !== numAmountPaid) {
         logger.warn(
-          `Idempotency key collision with different payload: key=${cleanKey} existing=(inv:${existingPayment.invoiceId}, amt:${existingPayment.amountPaid}) incoming=(inv:${numInvoiceId}, amt:${numAmountPaid})`
+          `Idempotency key collision with different payload: key=${cleanKey} incoming=(inv:${numInvoiceId}, amt:${numAmountPaid})`
         );
         throw new AppError(409, 'CONFLICT', 'Idempotency key has already been used with a different request payload.');
       }
+
+      // Same payload but different user → 409, never let one user replay another's payment
+      if (existingPayment.invoice.studentId !== undefined) {
+        // Identify who originally made this payment via audit log
+        const originalAudit = await tx.auditLog.findFirst({
+          where: {
+            action: 'PAYMENT_RECORDED',
+            entityType: 'FeeInvoice',
+            entityId: numInvoiceId,
+            meta: { contains: `"paymentId":${existingPayment.id}` },
+          },
+          select: { userId: true },
+        });
+        if (originalAudit && originalAudit.userId !== userContext.id) {
+          logger.warn(
+            `Idempotency key reuse by different user: key=${cleanKey} originalUser=${originalAudit.userId} currentUser=${userContext.id}`
+          );
+          throw new AppError(409, 'CONFLICT', 'Idempotency key has already been used with a different request payload.');
+        }
+      }
+
+      logger.info(`Duplicate idempotency key replayed: key=${cleanKey} paymentId=${existingPayment.id}`);
+      const { remainingBalance } = await computeInvoiceBalance(numInvoiceId, tx);
+      return {
+        isReplay: true,
+        message: 'Payment already processed with this idempotency key.',
+        payment: existingPayment,
+        invoiceStatus: existingPayment.invoice.status,
+        outstandingBalance: remainingBalance,
+      };
     }
 
     // 2. Fetch invoice and verify guardian access if applicable

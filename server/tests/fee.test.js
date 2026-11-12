@@ -467,5 +467,78 @@ describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
       expect(netLedger).toBe(outstandingBalance);
     });
   });
+
+  describe('Idempotency key cross-user and cross-invoice checks', () => {
+    it('idempotency key reused for a different invoice returns 409 and never leaks original payment', async () => {
+      // Create two invoices
+      const inv1Res = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 10000, dueDate: '2027-02-01' });
+      const inv1Id = inv1Res.body.id;
+
+      const inv2Res = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 10000, dueDate: '2027-02-02' });
+      const inv2Id = inv2Res.body.id;
+
+      const sharedKey = `cross-invoice-${crypto.randomUUID()}`;
+
+      // Pay invoice 1
+      const pay1 = await request(app)
+        .post(`/api/fees/invoices/${inv1Id}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', sharedKey)
+        .send({ amountPaid: 5000 });
+      expect(pay1.status).toBe(200);
+
+      // Reuse same key for invoice 2 → 409, no leak
+      const pay2 = await request(app)
+        .post(`/api/fees/invoices/${inv2Id}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', sharedKey)
+        .send({ amountPaid: 5000 });
+
+      expect(pay2.status).toBe(409);
+      expect(pay2.body.error).toBe('CONFLICT');
+      // Must NOT contain original payment details
+      expect(pay2.body).not.toHaveProperty('payment');
+      expect(pay2.body).not.toHaveProperty('outstandingBalance');
+    });
+
+    it('idempotency key reused by a different user returns 409 and never leaks original payment', async () => {
+      // Create invoice for rahulStudent (linked to guardian1)
+      const invRes = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 10000, dueDate: '2027-03-01' });
+      const invId = invRes.body.id;
+
+      const sharedKey = `cross-user-${crypto.randomUUID()}`;
+
+      // Guardian1 pays
+      const pay1 = await request(app)
+        .post(`/api/fees/invoices/${invId}/pay`)
+        .set('Authorization', `Bearer ${guardian1Token}`)
+        .set('Idempotency-Key', sharedKey)
+        .send({ amountPaid: 5000 });
+      expect(pay1.status).toBe(200);
+      expect(pay1.body.isReplay).toBe(false);
+
+      // Admin reuses same key with same payload → 409 (different user)
+      const pay2 = await request(app)
+        .post(`/api/fees/invoices/${invId}/pay`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Idempotency-Key', sharedKey)
+        .send({ amountPaid: 5000 });
+
+      expect(pay2.status).toBe(409);
+      expect(pay2.body.error).toBe('CONFLICT');
+      // Must NOT leak the original payment details
+      expect(pay2.body).not.toHaveProperty('payment');
+      expect(pay2.body).not.toHaveProperty('outstandingBalance');
+    });
+  });
 });
 
