@@ -4,6 +4,7 @@ import { authenticateToken, requireRoles } from '../middleware/auth.js';
 import * as academicController from '../controllers/academicController.js';
 import * as gradeRuleController from '../controllers/gradeRuleController.js';
 import * as auditLogController from '../controllers/auditLogController.js';
+import * as dashboardController from '../controllers/dashboardController.js';
 
 const router = express.Router();
 
@@ -71,6 +72,9 @@ router.delete('/grade-rules/:id', asyncHandler(gradeRuleController.deleteGradeRu
 
 // ── Audit Logs ─────────────────────────────────────────────────────────────
 router.get('/audit-logs', asyncHandler(auditLogController.getAuditLogs));
+
+// ── Admin Dashboard ────────────────────────────────────────────────────────
+router.get('/dashboard', asyncHandler(dashboardController.getAdminDashboard));
 
 export default router;
 
