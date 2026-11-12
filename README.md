@@ -149,11 +149,12 @@ The test suite uses a separate `test.db` database that is wiped and re-migrated 
 
 ## Known Limitations / Assumptions
 
-- **Payment is simulated.** No real payment gateway. Payment method is recorded as `SIMULATED`.
-- **Attendance can be corrected.** A duplicate `(studentId, date, session)` submission updates the existing record (upsert). The original entry is preserved in the audit log.
-- **SQLite is for local development only.** The schema and Prisma configuration support swapping to PostgreSQL by changing `provider` and `DATABASE_URL`.
-- **No file uploads.** Profile photos and document attachments are out of scope.
-- **No email/SMS notifications.** Out of scope.
+- **Upsert on duplicate attendance:** Attendance records have a unique constraint on `(student_id, date, session)`. When an attendance record is submitted for an existing slot, the system updates the status (upsert) and records an immutable audit log entry capturing both previous and new statuses for complete traceability.
+- **Attendance rate formula:** Attendance percentage is computed as `((PRESENT + LATE) / totalSessions) * 100`, rounded to two decimal places. Days or sessions without attendance taken are excluded from the denominator.
+- **Teacher ownership by section:** Teachers have granular role-based access restricted strictly to their assigned class sections via `ClassSubject`. Teachers can only record attendance, enter grades, and view reports for sections they teach (attempting access to unassigned sections returns `403 FORBIDDEN`). Teachers are completely blocked from all fee and financial routes (`403 FORBIDDEN`).
+- **404 for unlinked students (Privacy Preservation):** When a guardian attempts to access a student profile, attendance summary, report card, or fee invoice that is not linked to them in `GuardianStudent`, the API responds with `404 NOT_FOUND` rather than `403 FORBIDDEN`. This prevents attackers or unauthorized guardians from enumerating valid student IDs or confirming student enrollment.
+- **SQLite concurrency note:** SQLite operates with file-level write locking. All multi-step operations (invoice creation, bulk invoicing, idempotent payment processing, voiding) execute inside Prisma interactive `$transaction` blocks. Under intense concurrent writes, lock conflicts (`SQLITE_BUSY`, `SQLITE_LOCKED`, `P2034`) are intercepted by the centralized error handler and mapped to a clean `503 SERVICE_UNAVAILABLE` rather than unhandled 500 errors. For production horizontal scaling, PostgreSQL or MySQL should replace SQLite.
+- **Simulated payments only:** Payment processing is simulated without external banking or payment gateway integration. Balances are never statically stored on invoices; they are computed dynamically from `FeeLedgerEntry` (`SUM(DEBIT) - SUM(CREDIT)`). Every payment requires a unique `Idempotency-Key` header to protect against network replays and double charges.
 
 ---
 
