@@ -597,9 +597,14 @@ paths:
         '200':
           description: Dashboard metrics including student/teacher counts, today attendance rate, outstanding fees, and recent audit logs.
 
-  /attendance/bulk:
+  /attendance:
+    get:
+      summary: List attendance records with optional filters (date, sectionId, studentId)
+      responses:
+        '200':
+          description: List of attendance records.
     post:
-      summary: Record bulk attendance for a section and session
+      summary: Record attendance for a section and session
       requestBody:
         required: true
         content:
@@ -629,7 +634,54 @@ paths:
         '201':
           description: Attendance recorded or upserted.
 
-  /attendance/summary/{studentId}:
+  /attendance/bulk:
+    post:
+      summary: Record bulk attendance for a section and session (alias for /attendance)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, session, records]
+              properties:
+                date:
+                  type: string
+                  example: "2026-05-10"
+                session:
+                  type: string
+                  enum: [MORNING, AFTERNOON]
+                records:
+                  type: array
+                  items:
+                    type: object
+                    required: [studentId, status]
+                    properties:
+                      studentId:
+                        type: integer
+                      status:
+                        type: string
+                        enum: [PRESENT, ABSENT, LATE]
+      responses:
+        '201':
+          description: Attendance recorded or upserted.
+
+  /attendance/summary/section/{sectionId}:
+    get:
+      summary: Get attendance summary for an entire section
+      parameters:
+        - name: sectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Section attendance statistics.
+        '403':
+          description: Teacher is not assigned to this section.
+
+  /attendance/summary/student/{studentId}:
     get:
       summary: Get attendance summary for a student
       parameters:
@@ -643,6 +695,46 @@ paths:
           description: Attendance summary.
         '404':
           description: Student not found or unlinked to guardian.
+
+  /teacher/sections:
+    get:
+      summary: Get list of sections assigned to the logged-in teacher
+      responses:
+        '200':
+          description: Assigned sections with class and subjects.
+        '403':
+          description: Forbidden for non-teachers.
+
+  /teacher/sections/{sectionId}/students:
+    get:
+      summary: Get list of students in a section owned by the teacher
+      parameters:
+        - name: sectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Students enrolled in the section.
+        '403':
+          description: Teacher is not assigned to this section.
+
+  /guardian/students:
+    get:
+      summary: List students linked to the logged-in guardian
+      responses:
+        '200':
+          description: Array of linked children profiles.
+        '403':
+          description: Forbidden for non-guardians.
+
+  /guardian/children:
+    get:
+      summary: Alias for /guardian/students
+      responses:
+        '200':
+          description: Array of linked children profiles.
 
   /students/{id}:
     get:
@@ -700,6 +792,37 @@ paths:
           description: Exam results with read-time grade resolution.
     post:
       summary: Enter or upsert marks for students (Teacher subject verification enforced)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [results]
+              properties:
+                results:
+                  type: array
+                  items:
+                    type: object
+                    required: [studentId, marksObtained]
+                    properties:
+                      studentId:
+                        type: integer
+                      marksObtained:
+                        type: integer
+      responses:
+        '201':
+          description: Results saved.
+
+  /exams/{id}/marks:
+    post:
+      summary: Enter or upsert marks for students (primary endpoint)
       parameters:
         - name: id
           in: path

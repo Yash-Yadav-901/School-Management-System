@@ -17,6 +17,15 @@ router.post(
   asyncHandler(attendanceController.recordAttendance)
 );
 
+// Alias for bulk attendance posting
+router.post(
+  '/bulk',
+  authenticateToken,
+  requireRoles('ADMIN', 'TEACHER'),
+  requireTeacherSectionOwnership('sectionId'),
+  asyncHandler(attendanceController.recordAttendance)
+);
+
 router.get(
   '/',
   authenticateToken,

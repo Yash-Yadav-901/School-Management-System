@@ -46,6 +46,20 @@ router.post(
   asyncHandler(examController.enterMarks)
 );
 
+// Alias: /:id/results (GET for results, POST for marks entry)
+router.get(
+  '/:id/results',
+  authenticateToken,
+  requireRoles('ADMIN', 'TEACHER'),
+  asyncHandler(examController.getExam)
+);
+router.post(
+  '/:id/results',
+  authenticateToken,
+  requireRoles('ADMIN', 'TEACHER'),
+  asyncHandler(examController.enterMarks)
+);
+
 // Report card per student — ADMIN, TEACHER (for their section), and GUARDIAN (for linked student only, 404 for others)
 router.get(
   '/report-card/:studentId',
