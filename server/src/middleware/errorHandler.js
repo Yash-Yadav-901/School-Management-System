@@ -36,6 +36,19 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+  // SQLite BUSY / LOCKED — serialisation conflict under concurrent writes.
+  // Prisma wraps these as P2034 (transaction conflict) or raw SQLITE_BUSY / SQLITE_LOCKED.
+  if (
+    err.code === 'P2034' ||
+    (err.message && (err.message.includes('SQLITE_BUSY') || err.message.includes('SQLITE_LOCKED') || err.message.includes('database is locked')))
+  ) {
+    return res.status(503).json({
+      error: 'SERVICE_UNAVAILABLE',
+      message: 'Database is busy, please retry the request.',
+      details: [],
+    });
+  }
+
   logger.error(`Unhandled error on ${req.method} ${req.path}`, err);
   res.status(500).json({
     error: 'INTERNAL_ERROR',

@@ -540,5 +540,79 @@ describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
       expect(pay2.body).not.toHaveProperty('outstandingBalance');
     });
   });
+
+  describe('Concurrent payment safety', () => {
+    it('concurrent payments with different keys leave non-negative balance and no 500', async () => {
+      const invRes = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 10000, dueDate: '2027-04-01' });
+      const invId = invRes.body.id;
+
+      // Both try 8000 concurrently (total 16000 > 10000)
+      const results = await Promise.all([
+        request(app)
+          .post(`/api/fees/invoices/${invId}/pay`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .set('Idempotency-Key', `conc-diff-1-${crypto.randomUUID()}`)
+          .send({ amountPaid: 8000 }),
+        request(app)
+          .post(`/api/fees/invoices/${invId}/pay`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .set('Idempotency-Key', `conc-diff-2-${crypto.randomUUID()}`)
+          .send({ amountPaid: 8000 }),
+      ]);
+
+      const statuses = results.map((r) => r.status);
+      // No 500s
+      expect(statuses.every((s) => s < 500)).toBe(true);
+      // At least one success
+      expect(statuses).toContain(200);
+      // The other is a 4xx
+      expect(statuses.some((s) => s >= 400 && s < 500)).toBe(true);
+
+      // Balance must be non-negative
+      const detail = await request(app)
+        .get(`/api/fees/invoices/${invId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(detail.body.outstandingBalance).toBeGreaterThanOrEqual(0);
+    });
+
+    it('concurrent requests with same idempotency key leave exactly one payment and no 500', async () => {
+      const invRes = await request(app)
+        .post('/api/fees/invoices')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 20000, dueDate: '2027-04-02' });
+      const invId = invRes.body.id;
+      const sameKey = `conc-same-${crypto.randomUUID()}`;
+
+      const results = await Promise.all([
+        request(app)
+          .post(`/api/fees/invoices/${invId}/pay`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .set('Idempotency-Key', sameKey)
+          .send({ amountPaid: 5000 }),
+        request(app)
+          .post(`/api/fees/invoices/${invId}/pay`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .set('Idempotency-Key', sameKey)
+          .send({ amountPaid: 5000 }),
+      ]);
+
+      // No 500s
+      expect(results.every((r) => r.status < 500)).toBe(true);
+
+      // Exactly one payment row with this key
+      const paymentCount = await prisma.feePayment.count({ where: { idempotencyKey: sameKey } });
+      expect(paymentCount).toBe(1);
+
+      // Exactly one CREDIT ledger entry from this payment
+      const payment = await prisma.feePayment.findUnique({ where: { idempotencyKey: sameKey } });
+      const creditCount = await prisma.feeLedgerEntry.count({
+        where: { paymentId: payment.id, entryType: 'CREDIT' },
+      });
+      expect(creditCount).toBe(1);
+    });
+  });
 });
 
