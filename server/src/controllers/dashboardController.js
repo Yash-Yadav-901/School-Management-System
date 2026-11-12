@@ -4,3 +4,4 @@ export async function getAdminDashboard(req, res) {
   const result = await dashboardService.getAdminDashboard();
   res.json(result);
 }
+

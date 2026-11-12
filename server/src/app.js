@@ -12,6 +12,8 @@ import studentRoutes from './routes/student.js';
 import examRoutes from './routes/exam.js';
 import feeRoutes from './routes/fee.js';
 import reportRoutes from './routes/report.js';
+import teacherRoutes from './routes/teacher.js';
+import guardianRoutes from './routes/guardian.js';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import path from 'path';
@@ -53,6 +55,10 @@ app.use('/api/students', studentRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/teacher', teacherRoutes);
+app.use('/api/teachers', teacherRoutes);
+app.use('/api/guardian', guardianRoutes);
+app.use('/api/guardians', guardianRoutes);
 
 app.use(errorHandler);
 

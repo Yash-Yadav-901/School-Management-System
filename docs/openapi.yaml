@@ -892,3 +892,4 @@ paths:
       responses:
         '200':
           description: Fee report.
+

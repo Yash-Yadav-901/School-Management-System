@@ -49,6 +49,13 @@ export async function listExams(query, userContext) {
       return formatPaginatedResponse([], 0, page, pageSize);
     }
 
+    if (query.sectionId) {
+      const assigned = assignments.some((a) => a.sectionId === Number(query.sectionId));
+      if (!assigned) {
+        throw new AppError(403, 'FORBIDDEN', 'You do not have permission to access exams for this section.');
+      }
+    }
+
     where.OR = assignments.map((a) => ({
       sectionId: a.sectionId,
       subjectId: a.subjectId,
