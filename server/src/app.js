@@ -12,8 +12,19 @@ import studentRoutes from './routes/student.js';
 import examRoutes from './routes/exam.js';
 import feeRoutes from './routes/fee.js';
 import reportRoutes from './routes/report.js';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
+import path from 'path';
+import fs from 'fs';
 
 const app = express();
+
+const openApiPath = fs.existsSync(path.resolve('docs/openapi.yaml'))
+  ? path.resolve('docs/openapi.yaml')
+  : path.resolve('../docs/openapi.yaml');
+
+const swaggerDocument = YAML.load(openApiPath);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigin, credentials: true }));

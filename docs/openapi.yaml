@@ -1,0 +1,894 @@
+openapi: 3.0.3
+info:
+  title: School Management System API
+  version: 1.0.0
+  description: >
+    Production-grade Express.js & Prisma backend API for a K-12 School Management System.
+    Includes RBAC (Admin, Teacher, Guardian), ledger-backed fee management with idempotent payments,
+    dynamic grade resolution, bulk attendance, audit trails, and reporting dashboards.
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Provide the JWT token obtained from `/auth/login` as `Bearer <token>`.
+
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Unique UUID or client token to ensure idempotent payment execution.
+      schema:
+        type: string
+        example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      description: Page number for pagination (minimum 1, default 1).
+      schema:
+        type: integer
+        default: 1
+
+    PageSizeQuery:
+      name: pageSize
+      in: query
+      required: false
+      description: Number of items per page (minimum 1, maximum 100, default 10).
+      schema:
+        type: integer
+        default: 10
+
+  schemas:
+    StandardError:
+      type: object
+      required:
+        - error
+        - message
+        - details
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid input provided."
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "admin@school.demo"
+        password:
+          type: string
+          example: "Admin@123"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+            role:
+              type: string
+              enum: [ADMIN, TEACHER, GUARDIAN]
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      security: []
+      responses:
+        '200':
+          description: Service is healthy.
+
+  /auth/login:
+    post:
+      summary: Authenticate user and receive JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '401':
+          description: Invalid email or password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '429':
+          description: Too many failed login attempts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /auth/me:
+    get:
+      summary: Get currently authenticated user profile
+      responses:
+        '200':
+          description: Authenticated user details.
+        '401':
+          description: Unauthorized.
+
+  /admin/classes:
+    get:
+      summary: List all classes (Admin only)
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/PageSizeQuery'
+      responses:
+        '200':
+          description: Paginated classes.
+    post:
+      summary: Create class (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Class created.
+
+  /admin/classes/{id}:
+    get:
+      summary: Get class by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Class details.
+    put:
+      summary: Update class
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Class updated.
+    delete:
+      summary: Delete class
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Class deleted.
+        '409':
+          description: Cannot delete class with associated sections.
+
+  /admin/sections:
+    get:
+      summary: List sections (Admin only)
+      responses:
+        '200':
+          description: Paginated sections.
+    post:
+      summary: Create section (Admin only)
+      responses:
+        '201':
+          description: Section created.
+
+  /admin/sections/{id}:
+    get:
+      summary: Get section by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Section details.
+    put:
+      summary: Update section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Section updated.
+    delete:
+      summary: Delete section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Section deleted.
+
+  /admin/subjects:
+    get:
+      summary: List subjects
+      responses:
+        '200':
+          description: Paginated subjects.
+    post:
+      summary: Create subject
+      responses:
+        '201':
+          description: Subject created.
+
+  /admin/subjects/{id}:
+    get:
+      summary: Get subject by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subject details.
+    put:
+      summary: Update subject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subject updated.
+    delete:
+      summary: Delete subject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subject deleted.
+
+  /admin/teachers:
+    get:
+      summary: List teachers
+      responses:
+        '200':
+          description: Paginated teachers.
+    post:
+      summary: Create teacher account and profile (one transaction)
+      responses:
+        '201':
+          description: Teacher created.
+
+  /admin/teachers/{id}:
+    get:
+      summary: Get teacher by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Teacher details.
+    put:
+      summary: Update teacher
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Teacher updated.
+    delete:
+      summary: Delete teacher
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Teacher deleted.
+
+  /admin/guardians:
+    get:
+      summary: List guardians
+      responses:
+        '200':
+          description: Paginated guardians.
+    post:
+      summary: Create guardian account and profile (one transaction)
+      responses:
+        '201':
+          description: Guardian created.
+
+  /admin/guardians/{id}:
+    get:
+      summary: Get guardian by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Guardian details.
+    put:
+      summary: Update guardian
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Guardian updated.
+    delete:
+      summary: Delete guardian
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Guardian deleted.
+
+  /admin/students:
+    get:
+      summary: List students with filters
+      responses:
+        '200':
+          description: Paginated students.
+    post:
+      summary: Create student
+      responses:
+        '201':
+          description: Student created.
+
+  /admin/students/{id}:
+    get:
+      summary: Get student by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student details.
+    put:
+      summary: Update student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student updated.
+    delete:
+      summary: Delete student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student deleted.
+
+  /admin/class-subjects:
+    get:
+      summary: List teacher class-subject assignments
+      responses:
+        '200':
+          description: Paginated assignments.
+    post:
+      summary: Assign teacher to subject in section
+      responses:
+        '201':
+          description: Assignment created.
+
+  /admin/class-subjects/{id}:
+    delete:
+      summary: Delete class-subject assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assignment removed.
+
+  /admin/guardian-students:
+    get:
+      summary: List guardian-student relationships
+      responses:
+        '200':
+          description: Paginated links.
+    post:
+      summary: Link guardian to student
+      responses:
+        '201':
+          description: Link established.
+
+  /admin/guardian-students/{id}:
+    delete:
+      summary: Remove guardian-student link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Link removed.
+
+  /admin/grade-rules:
+    get:
+      summary: List configured grading bands
+      responses:
+        '200':
+          description: List of grading rules.
+    post:
+      summary: Create grade rule
+      responses:
+        '201':
+          description: Grade rule created.
+
+  /admin/grade-rules/{id}:
+    get:
+      summary: Get grade rule by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Grade rule details.
+    put:
+      summary: Update grade rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Grade rule updated.
+    delete:
+      summary: Delete grade rule (0% guard enforced)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Grade rule deleted.
+
+  /admin/audit-logs:
+    get:
+      summary: List audit logs with pagination and filters (Admin only)
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/PageSizeQuery'
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated and scrubbed audit logs.
+
+  /admin/dashboard:
+    get:
+      summary: Get overall administrative system dashboard
+      responses:
+        '200':
+          description: Dashboard metrics including student/teacher counts, today attendance rate, outstanding fees, and recent audit logs.
+
+  /attendance/bulk:
+    post:
+      summary: Record bulk attendance for a section and session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, session, records]
+              properties:
+                date:
+                  type: string
+                  example: "2026-05-10"
+                session:
+                  type: string
+                  enum: [MORNING, AFTERNOON]
+                records:
+                  type: array
+                  items:
+                    type: object
+                    required: [studentId, status]
+                    properties:
+                      studentId:
+                        type: integer
+                      status:
+                        type: string
+                        enum: [PRESENT, ABSENT, LATE]
+      responses:
+        '201':
+          description: Attendance recorded or upserted.
+
+  /attendance/summary/{studentId}:
+    get:
+      summary: Get attendance summary for a student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Attendance summary.
+        '404':
+          description: Student not found or unlinked to guardian.
+
+  /students/{id}:
+    get:
+      summary: View student academic and demographic profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student details.
+        '404':
+          description: Student not found or privacy-protected.
+
+  /exams:
+    get:
+      summary: List exams
+      responses:
+        '200':
+          description: Paginated exams.
+    post:
+      summary: Schedule a new exam
+      responses:
+        '201':
+          description: Exam created.
+
+  /exams/{id}:
+    delete:
+      summary: Delete exam (fails with 409 if results exist)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Exam deleted.
+        '409':
+          description: Cannot delete exam with recorded results.
+
+  /exams/{id}/results:
+    get:
+      summary: Get all student marks for an exam
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Exam results with read-time grade resolution.
+    post:
+      summary: Enter or upsert marks for students (Teacher subject verification enforced)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [results]
+              properties:
+                results:
+                  type: array
+                  items:
+                    type: object
+                    required: [studentId, marksObtained]
+                    properties:
+                      studentId:
+                        type: integer
+                      marksObtained:
+                        type: integer
+      responses:
+        '201':
+          description: Results saved.
+
+  /exams/report-card/{studentId}:
+    get:
+      summary: Generate dynamic multi-exam report card grouped by exam
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Grouped report card with per-exam totals, percentage, and letter grade.
+
+  /fees/invoices:
+    get:
+      summary: List invoices with computed balances from ledger
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/PageSizeQuery'
+      responses:
+        '200':
+          description: Paginated invoices.
+    post:
+      summary: Create individual student invoice (Admin only)
+      responses:
+        '201':
+          description: Invoice created with debit ledger entry.
+
+  /fees/invoices/bulk:
+    post:
+      summary: Bulk raise invoices for an entire section
+      responses:
+        '201':
+          description: Invoices created atomically.
+
+  /fees/invoices/{id}:
+    get:
+      summary: View invoice details, payments history, and ledger entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Invoice details.
+
+  /fees/invoices/{id}/pay:
+    post:
+      summary: Record payment against an invoice (Idempotent)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amountPaid]
+              properties:
+                amountPaid:
+                  type: integer
+                  description: Payment amount in integer paise.
+                  example: 50000
+      responses:
+        '200':
+          description: Payment processed or replayed idempotently.
+        '400':
+          description: Missing key or overpayment.
+        '409':
+          description: Already PAID, VOID, or idempotency conflict.
+
+  /fees/invoices/{id}/void:
+    post:
+      summary: Void an unpaid invoice with reversing ledger entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Invoice voided.
+        '409':
+          description: Invoice already void or has recorded payments.
+
+  /fees/student-summary/{studentId}:
+    get:
+      summary: View student fee summary (invoiced, paid, outstanding)
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student fee balance breakdown.
+
+  /fees/admin-report:
+    get:
+      summary: Comprehensive fee ledger report across all sections
+      responses:
+        '200':
+          description: Ledger report and reconciliation.
+
+  /reports/attendance:
+    get:
+      summary: Aggregate attendance report by section and date range
+      parameters:
+        - name: sectionId
+          in: query
+          schema:
+            type: integer
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attendance report.
+
+  /reports/academic:
+    get:
+      summary: Academic report per exam and section with grade distribution
+      parameters:
+        - name: sectionId
+          in: query
+          schema:
+            type: integer
+        - name: examId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Academic report.
+
+  /reports/fees:
+    get:
+      summary: Financial fee collection and outstanding balance report
+      parameters:
+        - name: sectionId
+          in: query
+          schema:
+            type: integer
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Fee report.
