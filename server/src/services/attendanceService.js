@@ -92,7 +92,14 @@ export async function recordBulkAttendance(sectionId, date, session, entries, re
     `Attendance recorded: sectionId=${sectionId} date=${date} session=${session} count=${entries.length} by userId=${recordedById}`
   );
 
-  return { sectionId: Number(sectionId), date, session: session.toUpperCase(), savedCount: entries.length };
+  return {
+    sectionId: Number(sectionId),
+    date,
+    session: session.toUpperCase(),
+    savedCount: entries.length,
+    createdCount: creates.length,
+    updatedCount: updates.length,
+  };
 }
 
 export async function listAttendance(query, userContext) {

@@ -125,11 +125,11 @@ export function AttendancePage() {
   const recordMutation = useMutation({
     mutationFn: (payload) => apiClient.post('/attendance', payload),
     onSuccess: (data) => {
+      const created = data.createdCount !== undefined ? data.createdCount : (hasExistingRecords ? 0 : data.savedCount);
+      const updated = data.updatedCount !== undefined ? data.updatedCount : (hasExistingRecords ? data.savedCount : 0);
       setFeedback({
         type: 'success',
-        message: hasExistingRecords
-          ? `Attendance successfully updated for ${data.savedCount} students.`
-          : `Attendance recorded successfully for ${data.savedCount} students.`,
+        message: `Attendance saved successfully: ${created} created, ${updated} updated.`,
       });
       setSubmitError(null);
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
