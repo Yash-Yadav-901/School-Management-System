@@ -7,7 +7,11 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { ForbiddenPage } from './pages/ForbiddenPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 import { AdminDashboardPlaceholder } from './pages/admin/AdminDashboardPlaceholder.jsx';
-import { TeacherSectionsPlaceholder } from './pages/teacher/TeacherSectionsPlaceholder.jsx';
+import { TeacherSectionsPage } from './pages/teacher/TeacherSectionsPage.jsx';
+import { AttendancePage } from './pages/teacher/AttendancePage.jsx';
+import { SectionAttendanceSummary } from './pages/teacher/SectionAttendanceSummary.jsx';
+import { TeacherExamsPage } from './pages/teacher/TeacherExamsPage.jsx';
+import { MarksEntryPage } from './pages/teacher/MarksEntryPage.jsx';
 import { GuardianChildrenPlaceholder } from './pages/guardian/GuardianChildrenPlaceholder.jsx';
 
 function RootRedirect() {
@@ -40,9 +44,11 @@ export function App() {
       {/* Teacher Role Routes */}
       <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/teacher/sections" element={<TeacherSectionsPlaceholder />} />
-          <Route path="/teacher/exams" element={<TeacherSectionsPlaceholder />} />
-          <Route path="/teacher/reports" element={<TeacherSectionsPlaceholder />} />
+          <Route path="/teacher/sections" element={<TeacherSectionsPage />} />
+          <Route path="/teacher/attendance" element={<AttendancePage />} />
+          <Route path="/teacher/reports" element={<SectionAttendanceSummary />} />
+          <Route path="/teacher/exams" element={<TeacherExamsPage />} />
+          <Route path="/teacher/exams/:examId/marks" element={<MarksEntryPage />} />
         </Route>
       </Route>
 
