@@ -33,6 +33,12 @@ beforeAll(async () => {
 describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
   describe('RBAC & Teacher access control', () => {
     it('blocks teacher from all fee routes with 403 FORBIDDEN', async () => {
+      const resTypes = await request(app)
+        .get('/api/fees/types')
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(resTypes.status).toBe(403);
+      expect(resTypes.body.error).toBe('FORBIDDEN');
+
       const res1 = await request(app)
         .get('/api/fees/invoices')
         .set('Authorization', `Bearer ${teacherToken}`);
@@ -44,6 +50,17 @@ describe('Phase 6: Fees, Ledger, and Simulated Payments', () => {
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({ studentId: rahulStudent.id, feeTypeId: tuitionFeeType.id, amountDue: 50000, dueDate: '2026-05-01' });
       expect(res2.status).toBe(403);
+    });
+
+    it('allows guardian to inspect fee types with 200 OK', async () => {
+      const res = await request(app)
+        .get('/api/fees/types')
+        .set('Authorization', `Bearer ${guardian1Token}`);
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body[0]).toHaveProperty('id');
+      expect(res.body[0]).toHaveProperty('name');
     });
 
     it('blocks guardian from admin-only fee routes with 403 FORBIDDEN', async () => {
