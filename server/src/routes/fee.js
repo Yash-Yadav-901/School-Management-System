@@ -17,6 +17,7 @@ router.post('/invoices/:id/void', requireRoles('ADMIN'), asyncHandler(feeControl
 router.get('/admin-report', requireRoles('ADMIN'), asyncHandler(feeController.getAdminFeeReport));
 
 // ── Shared endpoints (ADMIN & GUARDIAN with privacy checks) ────────────────
+router.get('/types', asyncHandler(feeController.getFeeTypes));
 router.get('/invoices', asyncHandler(feeController.getInvoices));
 router.get('/invoices/:id', asyncHandler(feeController.getInvoice));
 router.post('/invoices/:id/pay', asyncHandler(feeController.payInvoice));

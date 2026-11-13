@@ -6,6 +6,11 @@ import {
 import * as feeService from '../services/feeService.js';
 import { AppError } from '../utils/AppError.js';
 
+export async function getFeeTypes(req, res) {
+  const types = await feeService.listFeeTypes();
+  res.json(types);
+}
+
 export async function createSingleInvoice(req, res) {
   const errors = validateSingleInvoiceInput(req.body);
   if (errors.length > 0) throw new AppError(400, 'VALIDATION_ERROR', 'Invalid invoice input.', errors);

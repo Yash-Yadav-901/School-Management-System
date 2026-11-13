@@ -28,6 +28,10 @@ export async function computeInvoiceBalance(invoiceId, tx = prisma) {
   return { debits, credits, remainingBalance };
 }
 
+export async function listFeeTypes() {
+  return prisma.feeType.findMany({ orderBy: { name: 'asc' } });
+}
+
 export async function createSingleInvoice(data, userId) {
   const student = await prisma.student.findUnique({ where: { id: Number(data.studentId) } });
   if (!student) throw new AppError(404, 'NOT_FOUND', 'Referenced student does not exist.');
