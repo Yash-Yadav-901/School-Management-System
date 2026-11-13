@@ -27,6 +27,9 @@ export function LoginPage() {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
+  const searchParams = new URLSearchParams(location.search);
+  const isSessionExpired = searchParams.get('expired') === '1';
+
   function fillDemo(demoEmail, demoPass) {
     setEmail(demoEmail);
     setPassword(demoPass);
@@ -89,6 +92,18 @@ export function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white py-8 px-6 shadow-md rounded-xl sm:px-10 border border-slate-200">
+          {isSessionExpired && !error && (
+            <div
+              role="status"
+              className="mb-6 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm flex items-start space-x-2"
+            >
+              <svg className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Your session has expired. Please sign in again to continue.</span>
+            </div>
+          )}
+
           {error && (
             <div className="mb-6">
               <ErrorState title="Authentication Failed" message={error} />
