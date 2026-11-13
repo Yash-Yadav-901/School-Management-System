@@ -116,3 +116,4 @@ apiClient.post = (endpoint, body, options = {}) =>
 apiClient.put = (endpoint, body, options = {}) =>
   apiClient(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) });
 apiClient.delete = (endpoint, options = {}) => apiClient(endpoint, { ...options, method: 'DELETE' });
+

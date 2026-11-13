@@ -44,3 +44,4 @@ export function parseRupeesToPaise(rupeeString) {
   if (Number.isNaN(parsed)) return 0;
   return Math.round(parsed * 100);
 }
+
