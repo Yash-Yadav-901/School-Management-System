@@ -632,7 +632,24 @@ paths:
                         enum: [PRESENT, ABSENT, LATE]
       responses:
         '201':
-          description: Attendance recorded or upserted.
+          description: Attendance recorded or upserted with created and updated counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sectionId:
+                    type: integer
+                  date:
+                    type: string
+                  session:
+                    type: string
+                  savedCount:
+                    type: integer
+                  createdCount:
+                    type: integer
+                  updatedCount:
+                    type: integer
 
   /attendance/bulk:
     post:
@@ -664,7 +681,24 @@ paths:
                         enum: [PRESENT, ABSENT, LATE]
       responses:
         '201':
-          description: Attendance recorded or upserted.
+          description: Attendance recorded or upserted with created and updated counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sectionId:
+                    type: integer
+                  date:
+                    type: string
+                  session:
+                    type: string
+                  savedCount:
+                    type: integer
+                  createdCount:
+                    type: integer
+                  updatedCount:
+                    type: integer
 
   /attendance/summary/section/{sectionId}:
     get:
@@ -856,6 +890,28 @@ paths:
       responses:
         '200':
           description: Grouped report card with per-exam totals, percentage, and letter grade.
+
+  /fees/types:
+    get:
+      summary: List available fee assessment types (ADMIN and GUARDIAN)
+      responses:
+        '200':
+          description: Array of fee types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    defaultAmount:
+                      type: integer
+        '403':
+          description: Forbidden for teachers.
 
   /fees/invoices:
     get:
