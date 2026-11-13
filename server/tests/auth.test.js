@@ -107,7 +107,7 @@ describe('Phase 2: Authentication & Authorization', () => {
 
     it('exceeds the login rate limit and returns 429 with standard error shape', async () => {
       let rateLimitedRes = null;
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 60; i++) {
         const res = await request(app)
           .post('/api/auth/login')
           .send({ email: 'rate.test@school.demo', password: 'AnyPassword123' });

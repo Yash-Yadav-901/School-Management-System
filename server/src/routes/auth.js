@@ -10,13 +10,18 @@ import {
 
 const router = express.Router();
 
+const windowMinutes = process.env.LOGIN_RATE_LIMIT_WINDOW_MIN
+  ? Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MIN)
+  : 15;
+
+const defaultMax = process.env.NODE_ENV === 'test' ? 50 : 30;
+const maxAttempts = process.env.LOGIN_RATE_LIMIT_MAX
+  ? Number(process.env.LOGIN_RATE_LIMIT_MAX)
+  : defaultMax;
+
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.LOGIN_RATE_LIMIT
-    ? Number(process.env.LOGIN_RATE_LIMIT)
-    : process.env.NODE_ENV === 'test'
-      ? 25
-      : 5,
+  windowMs: windowMinutes * 60 * 1000,
+  max: maxAttempts,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
