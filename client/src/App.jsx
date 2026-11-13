@@ -12,7 +12,9 @@ import { AttendancePage } from './pages/teacher/AttendancePage.jsx';
 import { SectionAttendanceSummary } from './pages/teacher/SectionAttendanceSummary.jsx';
 import { TeacherExamsPage } from './pages/teacher/TeacherExamsPage.jsx';
 import { MarksEntryPage } from './pages/teacher/MarksEntryPage.jsx';
-import { GuardianChildrenPlaceholder } from './pages/guardian/GuardianChildrenPlaceholder.jsx';
+import { GuardianChildrenPage } from './pages/guardian/GuardianChildrenPage.jsx';
+import { ChildOverviewPage } from './pages/guardian/ChildOverviewPage.jsx';
+import { GuardianFeesPage } from './pages/guardian/GuardianFeesPage.jsx';
 
 function RootRedirect() {
   const { user, isAuthenticated, isLoading, getRoleHome } = useAuth();
@@ -55,8 +57,9 @@ export function App() {
       {/* Guardian Role Routes */}
       <Route element={<ProtectedRoute allowedRoles={['GUARDIAN']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/guardian/children" element={<GuardianChildrenPlaceholder />} />
-          <Route path="/guardian/fees" element={<GuardianChildrenPlaceholder />} />
+          <Route path="/guardian/children" element={<GuardianChildrenPage />} />
+          <Route path="/guardian/children/:studentId" element={<ChildOverviewPage />} />
+          <Route path="/guardian/fees" element={<GuardianFeesPage />} />
         </Route>
       </Route>
 
