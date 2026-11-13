@@ -1,8 +1,10 @@
+import { getSchoolDate } from '../utils/timezone.js';
+
 const VALID_SESSIONS = ['MORNING', 'AFTERNOON'];
 const VALID_STATUSES = ['PRESENT', 'ABSENT', 'LATE'];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-export function validateBulkAttendanceInput(data) {
+export function validateBulkAttendanceInput(data, referenceDate = new Date()) {
   const errors = [];
   if (!data || typeof data !== 'object') return ['Request body must be an object.'];
 
@@ -13,7 +15,7 @@ export function validateBulkAttendanceInput(data) {
   if (!data.date || !DATE_PATTERN.test(String(data.date).trim())) {
     errors.push('Date is required and must be in YYYY-MM-DD format.');
   } else {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getSchoolDate(referenceDate);
     if (String(data.date).trim() > today) {
       errors.push('Attendance date cannot be in the future.');
     }

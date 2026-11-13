@@ -1,4 +1,5 @@
 import prisma from '../db/index.js';
+import { getSchoolDate } from '../utils/timezone.js';
 
 const SENSITIVE_KEY_PATTERN = /(password|token|hash|secret|authorization)/i;
 
@@ -25,7 +26,7 @@ function sanitizeMeta(value) {
 }
 
 export async function getAdminDashboard() {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getSchoolDate();
 
   const [
     totalStudents,

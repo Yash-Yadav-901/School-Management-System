@@ -115,13 +115,14 @@ See [server/.env.example](server/.env.example).
 |---|---|---|
 | `DATABASE_URL` | Yes | Prisma SQLite path, e.g. `file:./dev.db` |
 | `JWT_SECRET` | Yes | Min 32-char random string |
-| `JWT_EXPIRES_IN` | No | Token lifetime, default `7d` |
+| `JWT_EXPIRES_IN` | No | Token lifetime, default `8h` |
 | `PORT` | No | HTTP port, default `4000` |
 | `BCRYPT_ROUNDS` | No | bcrypt cost factor, default `10` |
 | `CORS_ORIGIN` | No | Allowed origin, default `http://localhost:5173` |
 | `CLIENT_ORIGIN` | No | Allowed frontend origin for Vite dev, default `http://localhost:5173` |
 | `LOGIN_RATE_LIMIT_MAX` | No | Max login attempts per window, default `30` (higher in test env) |
 | `LOGIN_RATE_LIMIT_WINDOW_MIN` | No | Window duration in minutes for login rate limit, default `15` |
+| `SCHOOL_TIMEZONE` | No | School timezone for future-date attendance and daily metrics, default `Asia/Kolkata` |
 | `LOG_SILENT` | No | Set `true` during tests to suppress logs |
 
 ---
