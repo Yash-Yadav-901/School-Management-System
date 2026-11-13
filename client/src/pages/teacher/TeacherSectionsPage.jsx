@@ -211,3 +211,4 @@ export function TeacherSectionsPage() {
     </div>
   );
 }
+
