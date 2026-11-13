@@ -15,8 +15,9 @@ const NAV_CONFIG = {
   ],
   TEACHER: [
     { label: 'My Sections', to: '/teacher/sections' },
+    { label: 'Daily Attendance', to: '/teacher/attendance' },
     { label: 'Exams & Marks', to: '/teacher/exams' },
-    { label: 'Reports', to: '/teacher/reports' },
+    { label: 'Attendance Reports', to: '/teacher/reports' },
   ],
   GUARDIAN: [
     { label: 'My Children', to: '/guardian/children' },
