@@ -720,7 +720,7 @@ paths:
         '403':
           description: Teacher is not assigned to this section.
 
-  /guardian/students:
+  /guardian/children:
     get:
       summary: List students linked to the logged-in guardian
       responses:
@@ -728,13 +728,6 @@ paths:
           description: Array of linked children profiles.
         '403':
           description: Forbidden for non-guardians.
-
-  /guardian/children:
-    get:
-      summary: Alias for /guardian/students
-      responses:
-        '200':
-          description: Array of linked children profiles.
 
   /students/{id}:
     get:

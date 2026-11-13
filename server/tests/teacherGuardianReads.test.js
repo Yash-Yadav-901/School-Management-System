@@ -114,10 +114,10 @@ describe('Teacher and Guardian Safe Read Endpoints', () => {
     });
   });
 
-  describe('GET /api/guardian/students & /api/guardian/children', () => {
+  describe('GET /api/guardian/children', () => {
     it('guardian1 gets their linked children only (Rahul and Anjali Singh)', async () => {
       const res = await request(app)
-        .get('/api/guardian/students')
+        .get('/api/guardian/children')
         .set('Authorization', `Bearer ${guardian1Token}`);
 
       expect(res.status).toBe(200);
@@ -144,7 +144,7 @@ describe('Teacher and Guardian Safe Read Endpoints', () => {
 
     it('blocks teacher from guardian student list with 403 FORBIDDEN', async () => {
       const res = await request(app)
-        .get('/api/guardian/students')
+        .get('/api/guardian/children')
         .set('Authorization', `Bearer ${teacher1Token}`);
 
       expect(res.status).toBe(403);

@@ -73,7 +73,6 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/guardian', guardianRoutes);
-app.use('/api/guardians', guardianRoutes);
 
 app.use(errorHandler);
 
