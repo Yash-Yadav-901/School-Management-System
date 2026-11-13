@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, ApiClientError } from '../../api/client.js';
 import { formatPaiseToRupees, parseRupeesToPaise } from '../../utils/formatCurrency.js';
+import { shouldRegenerateIdempotencyKey } from '../../utils/idempotencyKey.js';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { Spinner } from '../../components/Spinner.jsx';
 import { EmptyState } from '../../components/EmptyState.jsx';
@@ -92,11 +93,19 @@ export function GuardianFeesPage() {
     },
     onError: (err) => {
       setPaymentFeedback(null);
-      // On network errors (status 0), do NOT change idempotencyKey so the user can safely retry!
-      if (err.status === 0 || err.code === 'NETWORK_ERROR') {
-        setPaymentError('Network connection issue. You can safely click Retry Payment using the same transaction key.');
+      if (shouldRegenerateIdempotencyKey(err.status)) {
+        // Definite 4xx client rejection (e.g. 400 overpayment, 409 conflict): regenerate key
+        setIdempotencyKey(crypto.randomUUID());
+        setPaymentError(err.message || 'Payment request rejected.');
       } else {
-        setPaymentError(err.message || 'Payment failed.');
+        // Network errors (status 0 / NETWORK_ERROR) and 5xx / 503: KEEP key for safe retry!
+        setPaymentError(
+          err.status === 503
+            ? 'Server busy (503). You can safely click Retry Payment using the same transaction key.'
+            : (err.status >= 500
+                ? 'Server error occurred. You can safely click Retry Payment using the same transaction key.'
+                : 'Network connection issue. You can safely click Retry Payment using the same transaction key.')
+        );
       }
     },
   });
