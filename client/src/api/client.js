@@ -70,13 +70,17 @@ export async function apiClient(endpoint, options = {}) {
     throw new ApiClientError(0, 'NETWORK_ERROR', 'Unable to connect to the server. Please check your network connection.');
   }
 
-  // Handle 401 Unauthorized globally: clear session and broadcast expiration
-  if (response.status === 401) {
+  // Handle 401 Unauthorized for authenticated requests: clear session and broadcast expiration.
+  // Unauthenticated requests (e.g. invalid credentials on login) should throw without clearing or redirecting.
+  const isAuthRequest = Boolean(headers['Authorization']);
+  if (response.status === 401 && isAuthRequest) {
     clearSession();
     logger.authState('session_expired');
-    window.dispatchEvent(new CustomEvent('sms:unauthorized'));
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sms:unauthorized'));
+      if (window.location && window.location.pathname !== '/login') {
+        window.location.href = '/login?expired=1';
+      }
     }
   }
 
