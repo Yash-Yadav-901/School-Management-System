@@ -146,15 +146,27 @@ export function AdminDashboardPage() {
               </span>
               <span className="text-[10px] font-mono text-slate-400">{todayAttendance.date}</span>
             </div>
-            <div className="mt-2 text-3xl font-extrabold text-brand-600">
-              {todayAttendance.attendanceRate}%
+            {todayAttendance.totalSessions > 0 && todayAttendance.attendanceRate !== null ? (
+              <div className="mt-2 text-3xl font-extrabold text-brand-600">
+                {todayAttendance.attendanceRate}%
+              </div>
+            ) : (
+              <div className="mt-2 text-xs font-semibold text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                No attendance recorded today
+              </div>
+            )}
+          </div>
+          {todayAttendance.totalSessions > 0 ? (
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3 text-xs">
+              <span className="text-emerald-700 font-semibold">{todayAttendance.present} Present</span>
+              <span className="text-amber-700 font-semibold">{todayAttendance.late} Late</span>
+              <span className="text-rose-700 font-semibold">{todayAttendance.absent} Absent</span>
             </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3 text-xs">
-            <span className="text-emerald-700 font-semibold">{todayAttendance.present} Present</span>
-            <span className="text-amber-700 font-semibold">{todayAttendance.late} Late</span>
-            <span className="text-rose-700 font-semibold">{todayAttendance.absent} Absent</span>
-          </div>
+          ) : (
+            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400">
+              Pending daily session marking
+            </div>
+          )}
         </div>
 
         {/* Outstanding Fees */}
@@ -202,3 +214,4 @@ export function AdminDashboardPage() {
     </div>
   );
 }
+

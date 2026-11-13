@@ -66,7 +66,7 @@ export async function getAdminDashboard() {
   const todayAttendanceRate =
     totalTodaySessions > 0
       ? Number((((present + late) / totalTodaySessions) * 100).toFixed(2))
-      : 0;
+      : null;
 
   // Fee metrics from ledger
   let totalInvoiced = 0;
