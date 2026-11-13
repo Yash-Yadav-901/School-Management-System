@@ -6,7 +6,11 @@ import { AppLayout } from './components/AppLayout.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { ForbiddenPage } from './pages/ForbiddenPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
-import { AdminDashboardPlaceholder } from './pages/admin/AdminDashboardPlaceholder.jsx';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx';
+import { AdminStudentsPage } from './pages/admin/AdminStudentsPage.jsx';
+import { AdminExamsPage } from './pages/admin/AdminExamsPage.jsx';
+import { AdminFeesPage } from './pages/admin/AdminFeesPage.jsx';
+import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage.jsx';
 import { TeacherSectionsPage } from './pages/teacher/TeacherSectionsPage.jsx';
 import { AttendancePage } from './pages/teacher/AttendancePage.jsx';
 import { SectionAttendanceSummary } from './pages/teacher/SectionAttendanceSummary.jsx';
@@ -33,13 +37,11 @@ export function App() {
       {/* Admin Role Routes */}
       <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/admin/dashboard" element={<AdminDashboardPlaceholder />} />
-          <Route path="/admin/students" element={<AdminDashboardPlaceholder />} />
-          <Route path="/admin/academic" element={<AdminDashboardPlaceholder />} />
-          <Route path="/admin/exams" element={<AdminDashboardPlaceholder />} />
-          <Route path="/admin/fees" element={<AdminDashboardPlaceholder />} />
-          <Route path="/admin/reports" element={<AdminDashboardPlaceholder />} />
-          <Route path="/admin/audit-logs" element={<AdminDashboardPlaceholder />} />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/students" element={<AdminStudentsPage />} />
+          <Route path="/admin/exams" element={<AdminExamsPage />} />
+          <Route path="/admin/fees" element={<AdminFeesPage />} />
+          <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
         </Route>
       </Route>
 
