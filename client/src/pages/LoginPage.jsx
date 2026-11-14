@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { FormField } from '../components/FormField.jsx';
@@ -14,9 +14,16 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function LoginPage() {
-  const { login, getRoleHome } = useAuth();
+  const { user, isAuthenticated, login, getRoleHome } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // If already authenticated, redirect to role home
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate(getRoleHome(user.role), { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, getRoleHome]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

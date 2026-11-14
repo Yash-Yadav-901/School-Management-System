@@ -27,7 +27,7 @@ export function ForbiddenPage() {
       </p>
 
       <div className="mt-6 flex items-center gap-3">
-        <Button variant="primary" onClick={() => navigate(user ? getRoleHome(user.role) : '/login')}>
+        <Button variant="primary" onClick={() => navigate(user ? getRoleHome(user.role) : '/login', { replace: true })}>
           Return to Dashboard
         </Button>
       </div>
