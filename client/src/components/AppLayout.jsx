@@ -60,10 +60,7 @@ export function AppLayout() {
                 </svg>
               </button>
 
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-                  S
-                </div>
+              <div className="flex items-center">
                 <span className="font-bold text-slate-900 tracking-tight text-lg">
                   SchoolSys
                 </span>
