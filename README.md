@@ -55,13 +55,21 @@ docs/          ER diagram, technical report, API docs
 
 ```bash
 git clone <repo-url>
+cd "School Management System"
+
+# Install server dependencies
 cd server
+npm install
+
+# Install client dependencies
+cd ../client
 npm install
 ```
 
 ### 2. Configure environment
 
 ```bash
+cd ../server
 cp .env.example .env
 # Edit .env — set JWT_SECRET to a random string of 32+ characters
 ```
@@ -70,40 +78,101 @@ cp .env.example .env
 
 ```bash
 npm run db:migrate   # creates dev.db and applies all migrations
-npm run db:seed      # populates with synthetic demo data
+npm run db:seed      # populates with synthetic demo data matching prisma/seed.js
 ```
 
-### 4. Start the development server
+### 4. Start backend and frontend servers
 
+In terminal 1 (backend):
 ```bash
-npm run dev          # http://localhost:4000
+cd server
+npm run dev          # http://localhost:4000 (API & Swagger UI at /api-docs)
 ```
+
+In terminal 2 (frontend):
+```bash
+cd client
+npm run dev          # http://localhost:5173
+```
+
+---
+
+## Application URLs
+
+| Service / Interface | URL | Description |
+|---|---|---|
+| Frontend Web Client | `http://localhost:5173` | React application (Admin, Teacher, Guardian portals) |
+| Backend API Root | `http://localhost:4000` | Express REST API server |
+| Swagger UI API Docs | `http://localhost:4000/api-docs` | Interactive OpenAPI 3.0 specification |
+| Health Check | `http://localhost:4000/api/health` | Service uptime and status probe |
+
+---
+
+## Demo Credentials & Seed Data
+
+The database seed (`server/prisma/seed.js`) provisions realistic synthetic accounts, classes, and records:
+
+### User Credentials
+
+| Role | Email | Password | Assigned Scope / Details |
+|---|---|---|---|
+| **Admin** | `admin@school.demo` | `Admin@123` | Institutional superuser (full access to academic setup, fees, reports, audit) |
+| **Teacher 1** | `teacher1@school.demo` | `Teacher@123` | Rajan Kumar — Assigned to **Grade 9 Section A** (Mathematics & Science) |
+| **Teacher 2** | `teacher2@school.demo` | `Teacher@123` | Priya Sharma — Assigned to **Grade 10 Section A** (Math, English) & **Grade 10 Section B** (History) |
+| **Guardian 1** | `guardian1@school.demo` | `Guardian@123` | Amit Singh — Linked children: **Rahul Singh** (`9A01`) & **Anjali Singh** (`9A02`) |
+| **Guardian 2** | `guardian2@school.demo` | `Guardian@123` | Sunita Verma — Linked children: **Priya Verma** (`10A01`) & **Karan Verma** (`10A02`) |
+
+### Example Seed Data
+
+- **Classes & Sections**:
+  - `Grade 9` &rarr; Section `A`
+  - `Grade 10` &rarr; Section `A`, Section `B`
+- **Subjects**:
+  - Mathematics (`MATH`), Science (`SCI`), English (`ENG`), History (`HIST`)
+- **Students**:
+  - **Grade 9-A**: Rahul Singh (`9A01`), Anjali Singh (`9A02`), Ravi Patel (`9A03`)
+  - **Grade 10-A**: Priya Verma (`10A01`), Karan Verma (`10A02`)
+  - **Grade 10-B**: Sneha Gupta (`10B01`), Vikram Joshi (`10B02`)
+- **Exams**:
+  - `Mid-Term Mathematics` (Section 9-A, Subject: MATH, Max Marks: 100, Date: 2026-10-15)
+  - `Mid-Term Science` (Section 9-A, Subject: SCI, Max Marks: 100, Date: 2026-10-17)
+  - Results entered for Rahul, Anjali, and Ravi.
+- **Grade Rules (Scale)**:
+  - `A+` (90.00% – 100.00%, GP 10)
+  - `A` (80.00% – 89.99%, GP 9)
+  - `B+` (70.00% – 79.99%, GP 8)
+  - `B` (60.00% – 69.99%, GP 7)
+  - `C` (50.00% – 59.99%, GP 6)
+  - `F` (0.00% – 49.99%, GP 0) &mdash; Protected base rule guard
+- **Fee Types & Invoices**:
+  - `Tuition Fee`: ₹5,000 (500,000 paise)
+  - `Library Fee`: ₹500 (50,000 paise)
+  - Invoices generated for all 7 students; Rahul Singh has one full payment recorded (`PAID`, ₹5,000 credit in fee ledger).
 
 ---
 
 ## NPM Scripts
 
+### Server (`server/`)
+
 | Script | Action |
 |---|---|
 | `npm run dev` | Start server with file watcher |
 | `npm start` | Start server (production) |
-| `npm test` | Run all tests once |
+| `npm test` | Run all Vitest backend tests (13 test files, 161 tests) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:seed` | Reset and seed demo data |
 | `npm run db:reset` | Drop all tables and re-migrate (destructive) |
 
----
+### Client (`client/`)
 
-## Demo Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | admin@school.demo | Admin@123 |
-| Teacher 1 | teacher1@school.demo | Teacher@123 |
-| Teacher 2 | teacher2@school.demo | Teacher@123 |
-| Guardian 1 | guardian1@school.demo | Guardian@123 |
-| Guardian 2 | guardian2@school.demo | Guardian@123 |
+| Script | Action |
+|---|---|
+| `npm run dev` | Start Vite dev server on `http://localhost:5173` |
+| `npm run build` | Build production bundle in `dist/` |
+| `npm test` | Run all Vitest frontend unit tests (3 test files, 17 tests) |
+| `npm run preview` | Locally preview production build |
 
 ---
 
@@ -141,13 +210,24 @@ See [docs/er-diagram.md](docs/er-diagram.md) (Phase 7+).
 
 ## Running Tests
 
+### Backend Tests (13 test files, 161 tests)
+
 ```bash
 cd server
 npm test           # single run, resets test.db before suite
-npm run test:watch # interactive
+npm run test:watch # interactive watch mode
 ```
 
-The test suite uses a separate `test.db` database that is wiped and re-migrated automatically before each run.
+The server test suite uses a separate `test.db` database that is wiped and re-migrated automatically before each test suite run.
+
+### Frontend Tests (3 test files, 17 tests)
+
+```bash
+cd client
+npm test           # runs Vitest for API client, idempotency key, and currency utils
+```
+
+**Total automated test coverage**: 16 test files, 178 tests, 100% passing.
 
 ---
 
