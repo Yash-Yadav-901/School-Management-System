@@ -8,10 +8,13 @@ import { EmptyState } from '../../components/EmptyState.jsx';
 import { ErrorState } from '../../components/ErrorState.jsx';
 import { Button } from '../../components/Button.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 export function TeacherSectionsPage() {
   const navigate = useNavigate();
   const [selectedSection, setSelectedSection] = useState(null);
+
+  const rosterModalRef = useDialogFocusTrap(Boolean(selectedSection), () => setSelectedSection(null));
 
   const {
     data: sections,
@@ -157,7 +160,7 @@ export function TeacherSectionsPage() {
           aria-modal="true"
           aria-labelledby="roster-modal-title"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-2xl w-full p-6 max-h-[85vh] flex flex-col">
+          <div ref={rosterModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-2xl w-full p-6 max-h-[85vh] flex flex-col">
             <div className="flex justify-between items-center pb-4 border-b border-slate-200">
               <div>
                 <h2 id="roster-modal-title" className="text-lg font-bold text-slate-900">

@@ -9,6 +9,7 @@ import { Button } from '../../components/Button.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { FormField } from '../../components/FormField.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 const TABS = [
   { id: 'classes', label: 'Classes' },
@@ -35,6 +36,9 @@ export function AdminAcademicPage() {
   const [formError, setFormError] = useState(null);
   const [conflictError, setConflictError] = useState(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+
+  const formModalRef = useDialogFocusTrap(Boolean(modalMode), () => setModalMode(null));
+  const deleteModalRef = useDialogFocusTrap(Boolean(deleteConfirmItem), () => setDeleteConfirmItem(null));
 
   function resetState() {
     setPage(1);
@@ -432,7 +436,7 @@ export function AdminAcademicPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={formModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <h2 className="text-lg font-bold text-slate-900">
                 {modalMode === 'create' ? `Add ${currentConfig.singular}` : `Edit ${currentConfig.singular}`}
@@ -743,7 +747,7 @@ export function AdminAcademicPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={deleteModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <h2 className="text-lg font-bold text-slate-900">
               Confirm Deletion
             </h2>
@@ -778,3 +782,4 @@ export function AdminAcademicPage() {
     </div>
   );
 }
+

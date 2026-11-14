@@ -8,6 +8,7 @@ import { ErrorState } from '../../components/ErrorState.jsx';
 import { Button } from '../../components/Button.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { FormField } from '../../components/FormField.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 export function AdminExamsPage() {
   const queryClient = useQueryClient();
@@ -35,6 +36,9 @@ export function AdminExamsPage() {
     description: '',
   });
   const [gradeRuleError, setGradeRuleError] = useState(null);
+
+  const examModalRef = useDialogFocusTrap(examModalOpen, () => setExamModalOpen(false));
+  const gradeModalRef = useDialogFocusTrap(Boolean(gradeModalMode), closeGradeModal);
 
   // Fetch sections and subjects for Exam creation
   const { data: sectionsData } = useQuery({
@@ -471,7 +475,7 @@ export function AdminExamsPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={examModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <h2 className="text-lg font-bold text-slate-900">Schedule Examination</h2>
               <button
@@ -576,7 +580,7 @@ export function AdminExamsPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={gradeModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <h2 className="text-lg font-bold text-slate-900">
                 {gradeModalMode === 'create' ? 'Add Grade Rule' : `Edit Grade Rule: ${editingGradeRule?.label}`}

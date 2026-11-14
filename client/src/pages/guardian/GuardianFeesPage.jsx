@@ -11,6 +11,7 @@ import { ErrorState } from '../../components/ErrorState.jsx';
 import { Button } from '../../components/Button.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { FormField } from '../../components/FormField.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 export function GuardianFeesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -18,6 +19,8 @@ export function GuardianFeesPage() {
 
   const selectedStudentId = searchParams.get('studentId') || '';
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+
+  const invoiceModalRef = useDialogFocusTrap(Boolean(selectedInvoiceId), () => setSelectedInvoiceId(null));
 
   // Simulated Payment Form state
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
@@ -291,7 +294,7 @@ export function GuardianFeesPage() {
           aria-modal="true"
           aria-labelledby="invoice-modal-title"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-3xl w-full p-6 max-h-[90vh] flex flex-col">
+          <div ref={invoiceModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-3xl w-full p-6 max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-start pb-4 border-b border-slate-200">
               <div>
                 <span className="text-xs font-mono font-semibold text-slate-500 uppercase tracking-wider">

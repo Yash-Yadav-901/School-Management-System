@@ -9,6 +9,7 @@ import { Button } from '../../components/Button.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { FormField } from '../../components/FormField.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 const GENDER_OPTIONS = ['MALE', 'FEMALE', 'OTHER'];
 
@@ -35,6 +36,9 @@ export function AdminStudentsPage() {
   const [actionError, setActionError] = useState(null);
   const [deleteConflictError, setDeleteConflictError] = useState(null);
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState(null);
+
+  const formModalRef = useDialogFocusTrap(Boolean(modalMode), closeModal);
+  const deleteModalRef = useDialogFocusTrap(Boolean(deleteConfirmStudent), () => setDeleteConfirmStudent(null));
 
   // Fetch sections for filter and form dropdowns
   const { data: sectionsResponse } = useQuery({
@@ -360,7 +364,7 @@ export function AdminStudentsPage() {
           aria-modal="true"
           aria-labelledby="student-modal-title"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6">
+          <div ref={formModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <h2 id="student-modal-title" className="text-lg font-bold text-slate-900">
                 {modalMode === 'create' ? 'Enroll New Student' : `Edit Student: ${editingStudent?.name}`}
@@ -485,7 +489,7 @@ export function AdminStudentsPage() {
           aria-modal="true"
           aria-labelledby="delete-dialog-title"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={deleteModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <h2 id="delete-dialog-title" className="text-lg font-bold text-slate-900">
               Confirm Student Deletion
             </h2>

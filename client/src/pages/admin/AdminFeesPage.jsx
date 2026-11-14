@@ -10,6 +10,7 @@ import { Button } from '../../components/Button.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { FormField } from '../../components/FormField.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 const STATUS_OPTIONS = ['ALL', 'UNPAID', 'PARTIAL', 'PAID', 'VOID'];
 
@@ -27,6 +28,10 @@ export function AdminFeesPage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
   const [voidConfirmInvoice, setVoidConfirmInvoice] = useState(null);
   const [voidError, setVoidError] = useState(null);
+
+  const createModalRef = useDialogFocusTrap(createModalOpen, () => setCreateModalOpen(false));
+  const voidModalRef = useDialogFocusTrap(Boolean(voidConfirmInvoice), () => setVoidConfirmInvoice(null));
+  const detailModalRef = useDialogFocusTrap(Boolean(selectedInvoiceId), () => setSelectedInvoiceId(null));
 
   // Single Invoice Form
   const [invoiceForm, setInvoiceForm] = useState({
@@ -352,7 +357,7 @@ export function AdminFeesPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={createModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <h2 className="text-lg font-bold text-slate-900">Raise Single Invoice</h2>
               <button
@@ -451,7 +456,7 @@ export function AdminFeesPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div ref={voidModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <h2 className="text-lg font-bold text-slate-900">
               Void Invoice #{voidConfirmInvoice.invoiceNumber}
             </h2>
@@ -503,7 +508,7 @@ export function AdminFeesPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-2xl w-full p-6 max-h-[85vh] flex flex-col space-y-4">
+          <div ref={detailModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-2xl w-full p-6 max-h-[85vh] flex flex-col space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <h2 className="text-lg font-bold text-slate-900">
                 Invoice #{invoiceDetail?.invoiceNumber || selectedInvoiceId} Ledger

@@ -9,6 +9,7 @@ import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { Button } from '../../components/Button.jsx';
 import { FormField } from '../../components/FormField.jsx';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap.js';
 
 const COMMON_ENTITIES = [
   'ALL',
@@ -30,6 +31,8 @@ export function AdminAuditLogsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedMetaLog, setSelectedMetaLog] = useState(null);
+
+  const metaModalRef = useDialogFocusTrap(Boolean(selectedMetaLog), () => setSelectedMetaLog(null));
 
   const {
     data: auditResponse,
@@ -238,7 +241,7 @@ export function AdminAuditLogsPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+          <div ref={metaModalRef} className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <div>
                 <span className="text-xs font-mono font-bold text-brand-600 uppercase">
