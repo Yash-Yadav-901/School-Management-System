@@ -291,6 +291,20 @@ export async function createTeacher(data) {
       },
     });
 
+    await tx.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'TEACHER_CREATED',
+        entityType: 'Teacher',
+        entityId: teacher.id,
+        meta: JSON.stringify({
+          name: teacher.name,
+          email: user.email,
+          phone: teacher.phone,
+        }),
+      },
+    });
+
     return teacher;
   });
 }

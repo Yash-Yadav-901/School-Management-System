@@ -125,4 +125,42 @@ describe('Phase 7: Admin Audit Log Endpoint', () => {
     expect(entry.meta.nested).not.toHaveProperty('password');
     expect(entry.meta.nested).not.toHaveProperty('refreshToken');
   });
+
+  it('confirms audit log metadata never contains password hashes or tokens for login and teacher creation', async () => {
+    // 1. Perform login
+    await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'teacher1@school.demo', password: 'Teacher@123' });
+
+    // 2. Perform teacher creation as admin
+    const newTeacherEmail = `audit_teacher_${Date.now()}@school.demo`;
+    await request(app)
+      .post('/api/admin/teachers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Audit Test Teacher',
+        email: newTeacherEmail,
+        password: 'SecurePassword@123',
+        phone: '9876543210',
+      });
+
+    // 3. Inspect audit logs
+    const res = await request(app)
+      .get('/api/admin/audit-logs?pageSize=50')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+
+    const loginLog = res.body.data.find((l) => l.action === 'LOGIN');
+    expect(loginLog).toBeDefined();
+    expect(loginLog.meta).not.toHaveProperty('password');
+    expect(loginLog.meta).not.toHaveProperty('passwordHash');
+    expect(loginLog.meta).not.toHaveProperty('token');
+
+    const teacherLog = res.body.data.find((l) => l.action === 'TEACHER_CREATED' && l.meta?.email === newTeacherEmail);
+    expect(teacherLog).toBeDefined();
+    expect(teacherLog.meta).not.toHaveProperty('password');
+    expect(teacherLog.meta).not.toHaveProperty('passwordHash');
+    expect(teacherLog.meta).not.toHaveProperty('token');
+  });
 });

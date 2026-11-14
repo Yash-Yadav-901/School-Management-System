@@ -31,6 +31,20 @@ export async function loginUser(email, password) {
     role: user.role,
   });
 
+  // Log authentication event in immutable audit log (never expose password or token)
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: 'LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      meta: JSON.stringify({
+        email: user.email,
+        role: user.role,
+      }),
+    },
+  });
+
   logger.info(`User authenticated successfully: id=${user.id}, role=${user.role}`);
 
   return {
