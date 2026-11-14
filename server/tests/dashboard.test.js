@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../src/app.js';
 import prisma from '../src/db/index.js';
+import { getSchoolDate } from '../src/utils/timezone.js';
 
 let adminToken, teacherToken, guardianToken;
 
@@ -70,6 +71,22 @@ describe('Phase 7: Admin Dashboard Endpoint (/api/admin/dashboard)', () => {
       expect(log).toHaveProperty('entityType');
       expect(log).toHaveProperty('user');
       expect(log.user).not.toHaveProperty('passwordHash');
+    }
+  });
+
+  it('confirms today uses the school timezone helper and matches getSchoolDate()', async () => {
+    const expectedToday = getSchoolDate();
+    const res = await request(app)
+      .get('/api/admin/dashboard')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.todayAttendance.date).toBe(expectedToday);
+
+    if (res.body.todayAttendance.totalSessions === 0) {
+      expect(res.body.todayAttendance.attendanceRate).toBeNull();
+    } else {
+      expect(typeof res.body.todayAttendance.attendanceRate).toBe('number');
     }
   });
 });
