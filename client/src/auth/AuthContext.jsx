@@ -59,8 +59,9 @@ export function AuthProvider({ children }) {
       try {
         const profile = await apiClient.get('/auth/me');
         if (isMounted && profile) {
-          setUser(profile);
-          setSession(token, profile);
+          const userData = profile.user || profile;
+          setUser(userData);
+          setSession(token, userData);
         }
       } catch {
         if (isMounted) {

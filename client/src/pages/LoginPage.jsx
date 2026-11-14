@@ -60,7 +60,17 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       const user = await login(email.trim(), password);
-      const destination = location.state?.from?.pathname || getRoleHome(user.role);
+      let destination = getRoleHome(user.role);
+      const fromPath = location.state?.from?.pathname;
+      if (fromPath && fromPath !== '/forbidden' && fromPath !== '/login') {
+        const isAllowed =
+          (user.role === 'ADMIN' && (fromPath.startsWith('/admin') || fromPath.startsWith('/reports'))) ||
+          (user.role === 'TEACHER' && (fromPath.startsWith('/teacher') || fromPath.startsWith('/reports'))) ||
+          (user.role === 'GUARDIAN' && fromPath.startsWith('/guardian'));
+        if (isAllowed) {
+          destination = fromPath;
+        }
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
