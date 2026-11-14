@@ -101,6 +101,7 @@ export async function getAdminDashboard() {
       outstandingFees,
     },
     recentAuditLogs: sanitizedLogs,
+    recentAuditEntries: sanitizedLogs,
   };
 }
 

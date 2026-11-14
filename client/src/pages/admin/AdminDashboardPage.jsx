@@ -41,7 +41,10 @@ export function AdminDashboardPage() {
     );
   }
 
-  const { totals, todayAttendance, fees, recentAuditEntries } = dashboard;
+  const totals = dashboard?.totals || { students: 0, teachers: 0 };
+  const todayAttendance = dashboard?.todayAttendance || { totalSessions: 0, attendanceRate: null };
+  const fees = dashboard?.fees || { totalInvoiced: 0, totalPaid: 0, outstandingFees: 0 };
+  const recentAuditEntries = dashboard?.recentAuditLogs || dashboard?.recentAuditEntries || [];
 
   const auditColumns = [
     {
