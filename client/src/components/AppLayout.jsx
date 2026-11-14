@@ -7,8 +7,10 @@ const NAV_CONFIG = {
   ADMIN: [
     { label: 'Dashboard', to: '/admin/dashboard' },
     { label: 'Students', to: '/admin/students' },
+    { label: 'Academic Setup', to: '/admin/academic' },
     { label: 'Exams & Grades', to: '/admin/exams' },
     { label: 'Fees & Invoices', to: '/admin/fees' },
+    { label: 'Reports', to: '/admin/reports' },
     { label: 'Audit Logs', to: '/admin/audit-logs' },
   ],
   TEACHER: [

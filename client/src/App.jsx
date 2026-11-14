@@ -8,9 +8,11 @@ import { ForbiddenPage } from './pages/ForbiddenPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.jsx';
 import { AdminStudentsPage } from './pages/admin/AdminStudentsPage.jsx';
+import { AdminAcademicPage } from './pages/admin/AdminAcademicPage.jsx';
 import { AdminExamsPage } from './pages/admin/AdminExamsPage.jsx';
 import { AdminFeesPage } from './pages/admin/AdminFeesPage.jsx';
 import { AdminAuditLogsPage } from './pages/admin/AdminAuditLogsPage.jsx';
+import { ReportsPage } from './pages/reports/ReportsPage.jsx';
 import { TeacherSectionsPage } from './pages/teacher/TeacherSectionsPage.jsx';
 import { AttendancePage } from './pages/teacher/AttendancePage.jsx';
 import { SectionAttendanceSummary } from './pages/teacher/SectionAttendanceSummary.jsx';
@@ -39,8 +41,10 @@ export function App() {
         <Route element={<AppLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/students" element={<AdminStudentsPage />} />
+          <Route path="/admin/academic" element={<AdminAcademicPage />} />
           <Route path="/admin/exams" element={<AdminExamsPage />} />
           <Route path="/admin/fees" element={<AdminFeesPage />} />
+          <Route path="/admin/reports" element={<ReportsPage />} />
           <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
         </Route>
       </Route>
@@ -50,7 +54,7 @@ export function App() {
         <Route element={<AppLayout />}>
           <Route path="/teacher/sections" element={<TeacherSectionsPage />} />
           <Route path="/teacher/attendance" element={<AttendancePage />} />
-          <Route path="/teacher/reports" element={<SectionAttendanceSummary />} />
+          <Route path="/teacher/reports" element={<ReportsPage />} />
           <Route path="/teacher/exams" element={<TeacherExamsPage />} />
           <Route path="/teacher/exams/:examId/marks" element={<MarksEntryPage />} />
         </Route>
