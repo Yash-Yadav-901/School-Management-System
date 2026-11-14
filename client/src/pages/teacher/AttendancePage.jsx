@@ -36,14 +36,18 @@ export function AttendancePage() {
 
   // Fetch teacher's assigned sections
   const {
-    data: sections,
+    data: rawSections,
     isLoading: sectionsLoading,
     isError: sectionsError,
     error: sectionsErrObj,
   } = useQuery({
     queryKey: ['teacher', 'sections'],
-    queryFn: () => apiClient.get('/teacher/sections'),
+    queryFn: async () => {
+      const res = await apiClient.get('/teacher/sections');
+      return Array.isArray(res) ? res : res?.data || [];
+    },
   });
+  const sections = Array.isArray(rawSections) ? rawSections : [];
 
   // Automatically select first section if none selected
   useEffect(() => {

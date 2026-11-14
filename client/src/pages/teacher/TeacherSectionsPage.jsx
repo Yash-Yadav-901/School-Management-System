@@ -17,15 +17,19 @@ export function TeacherSectionsPage() {
   const rosterModalRef = useDialogFocusTrap(Boolean(selectedSection), () => setSelectedSection(null));
 
   const {
-    data: sections,
+    data: rawSections,
     isLoading,
     isError,
     error,
     refetch,
   } = useQuery({
     queryKey: ['teacher', 'sections'],
-    queryFn: () => apiClient.get('/teacher/sections'),
+    queryFn: async () => {
+      const res = await apiClient.get('/teacher/sections');
+      return Array.isArray(res) ? res : res?.data || [];
+    },
   });
+  const sections = Array.isArray(rawSections) ? rawSections : [];
 
   const studentsQuery = useQuery({
     queryKey: ['teacher', 'section-students', selectedSection?.id],

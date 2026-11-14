@@ -29,10 +29,21 @@ export function ReportsPage() {
 
   // Section options query (Teacher sees own sections, Admin sees all sections)
   const { data: sectionsData } = useQuery({
-    queryKey: [isTeacher ? 'teacher' : 'admin', 'sections'],
-    queryFn: () => (isTeacher ? apiClient.get('/teacher/sections') : apiClient.get('/admin/sections?pageSize=100').then((r) => r.data)),
+    queryKey: ['reports', isTeacher ? 'teacher' : 'admin', 'sections'],
+    queryFn: async () => {
+      if (isTeacher) {
+        const res = await apiClient.get('/teacher/sections');
+        return Array.isArray(res) ? res : res?.data || [];
+      }
+      const res = await apiClient.get('/admin/sections?pageSize=100');
+      return Array.isArray(res) ? res : res?.data || [];
+    },
   });
-  const sections = sectionsData || [];
+  const sections = Array.isArray(sectionsData)
+    ? sectionsData
+    : Array.isArray(sectionsData?.data)
+    ? sectionsData.data
+    : [];
 
   // 1. Attendance Report Query
   const {
@@ -258,7 +269,7 @@ export function ReportsPage() {
             <EmptyState title="No Exam Records" description="No examinations matched the section filter." />
           ) : (
             <div className="space-y-6">
-              {academicReport.exams.map((exam) => (
+              {(academicReport?.exams || []).map((exam) => (
                 <div key={exam.examId} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
                     <div>
@@ -339,7 +350,7 @@ export function ReportsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
-                        {feeReport.sections.map((sec) => (
+                        {(feeReport?.sections || []).map((sec) => (
                           <tr key={sec.sectionId}>
                             <td className="px-4 py-2.5 font-medium text-slate-900">{sec.sectionName}</td>
                             <td className="px-4 py-2.5 text-right font-mono">{formatPaiseToRupees(sec.invoiced)}</td>
