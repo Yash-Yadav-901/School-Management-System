@@ -1,325 +1,396 @@
 # School Management System
 
-A full-stack web application for managing school operations — built for the Algions AI Labs internship assessment.
+A full-stack web application for core school operations: academic administration, attendance, examinations and report cards, and fee management, with separate admin, teacher and guardian portals. Built for the Algions AI Labs Full-Stack Web Development assessment (assigned project: School Management System).
 
----
+**Links:** [Live demo](https://school-management-system-psi-smoky.vercel.app/login) | [API docs](https://school-management-system-f6pr.onrender.com/api-docs) | [ER diagram](docs/er-diagram.md) | [Technical report](docs/technical-report.md) 
 
-## Architecture
+> Live demo data resets whenever the hosted server restarts, and the first request after idle can take up to a minute. If the live link is unavailable, the local setup below takes about 5 minutes.
 
+## Quick start
+
+```bash
+git clone YOUR_REPO_URL
+cd "School Management System"
+
+cd server
+npm install
+cp .env.example .env        # set JWT_SECRET to a random string of 32+ characters
+npm run db:migrate
+npm run db:seed
+npm run dev                 # API on http://localhost:4000, docs at /api-docs
+
+# second terminal
+cd client
+npm install
+npm run dev                 # app on http://localhost:5173
 ```
-client/        React 18 + Vite + Tailwind CSS 
-server/        Node.js + Express, ES modules
-  src/
-    config/    Environment variable validation
-    db/        Prisma client singleton
-    middleware/ Auth, RBAC, error handler, request logger
-    utils/     logger, AppError, asyncHandler
-    validators/ Plain JS validation functions (no Zod)
-    routes/    Express routers (one per module)
-    controllers/ HTTP layer only — no business logic
-    services/  Business rules and transactions
-  prisma/
-    schema.prisma  Database schema
-    migrations/    Repeatable migration history
-    seed.js        Synthetic demo data
-  tests/       Vitest + Supertest integration tests
-docs/          ER diagram, technical report, API docs
-```
 
-**Layering rule:** routes → controllers → services → Prisma. Controllers never contain business logic.
+Requires Node.js 20+ and npm 10+. Run tests with `npm test` in `server/` (161 tests) and in `client/` (17 tests).
 
----
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API | http://localhost:4000 |
+| Swagger UI | http://localhost:4000/api-docs |
+| Health check | http://localhost:4000/api/health |
 
-## Tech Stack
+## Demo credentials
+
+Dummy credentials and synthetic data only. These accounts exist after `npm run db:seed`.
+
+| Role | Email | Password | Scope |
+|---|---|---|---|
+| Admin | admin@school.demo | Admin@123 | Full access |
+| Teacher 1 | teacher1@school.demo | Teacher@123 | Grade 9 Section A (Mathematics, Science) |
+| Teacher 2 | teacher2@school.demo | Teacher@123 | Grade 10 A (Math, English) and Grade 10 B (History) |
+| Guardian 1 | guardian1@school.demo | Guardian@123 | Rahul Singh (9A01) and Anjali Singh (9A02) |
+| Guardian 2 | guardian2@school.demo | Guardian@123 | Priya Verma (10A01) and Karan Verma (10A02) |
+
+## Requirements coverage
+
+| Requirement from the brief | Implementation | Evidence |
+|---|---|---|
+| Academic administration | Admin CRUD for students, guardians, teachers, classes, sections, subjects, assignments and guardian links, with search, filters and pagination. Deleting a record with dependents returns 409. | `server/tests/adminAcademic.test.js` |
+| Attendance | Unique constraint on (student, date, session). Duplicates are safely updated (upsert) with an audit entry. Section and student summaries. | `server/tests/attendance.test.js` |
+| Exams, grading, report card | Grades are computed at read time from `GradeRule`. Report card is grouped per exam. Admin CRUD for grade rules. | `exam.test.js`, `gradeRule.test.js`, `gradeUtils.test.js` |
+| Fees (simulated) | Ledger of DEBIT and CREDIT entries. Balance is computed from the ledger. Payment, ledger entry, status change and audit log run in one transaction. | `server/tests/fee.test.js` |
+| Role-based access | Server-side JWT authentication, `requireRoles`, and ownership checks for teacher sections and guardian students. | `auth.test.js`, `teacherGuardianReads.test.js` |
+| Reporting and privacy | Attendance, academic and fee reports scoped by role. Guardians get 404 for unlinked students. | `report.test.js` |
+| Audit trail and dashboard | Append-only audit log with sensitive fields scrubbed. Admin dashboard. | `auditLog.test.js`, `dashboard.test.js` |
+| Duplicate and conflict protection | `Idempotency-Key` header, unique key constraint, overpayment and invalid-state rejection, concurrent payment tests. | `fee.test.js` |
+| Migrations, seed, diagram, API docs | Prisma migrations, `prisma/seed.js`, ER diagram, OpenAPI at `/api-docs`. | `server/prisma/`, `docs/` |
+
+## Acceptance tests
+
+| # | Acceptance test | Automated test | Manual check |
+|---|---|---|---|
+| 1 | Teacher accesses only assigned classes and records attendance | `attendance.test.js`: teacher on an unassigned section gets 403. `teacherGuardianReads.test.js`: teacher sees only assigned sections | Walkthrough 1 |
+| 2 | Duplicate attendance is rejected or safely updated | `attendance.test.js`: duplicate submission updates one row, concurrent duplicates leave one row | Walkthrough 2 |
+| 3 | Exam result calculated from configured rules | `gradeUtils.test.js`: boundary cases. `gradeRule.test.js`: editing a rule changes the grade | Walkthrough 3 |
+| 4 | Guardian sees only the linked student | `teacherGuardianReads.test.js`: unlinked student profile and report card return 404 | Walkthrough 4 |
+| 5 | Fee due and paid reconcile with the ledger | `fee.test.js`: independent reconciliation across paid, partial, unpaid and void invoices | Walkthrough 5 |
+
+Exact test names are listed in [docs/technical-report.md](docs/technical-report.md).
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite, Tailwind CSS, React Router, TanStack Query |
-| Backend | Node.js 22, Express 4 |
-| ORM | Prisma 5 |
-| Database | SQLite (local dev) |
-| Auth | bcrypt, jsonwebtoken |
-| Security | helmet, cors, express-rate-limit |
-| API Docs | swagger-ui-express |
+| Frontend | React 18, Vite, Tailwind CSS, React Router |
+| Backend | Node.js, Express 4 (ES modules) |
+| Database | SQLite with Prisma 5 (migrations and seed) |
+| Auth and security | bcrypt, jsonwebtoken, cors, express-rate-limit |
+| API docs | OpenAPI 3, swagger-ui-express |
 | Testing | Vitest, Supertest |
 
----
+## Architecture
 
-## Setup
+A modular monolith with strict layering: routes, then controllers (HTTP only), then services (business rules and transactions), then Prisma.
 
-### Prerequisites
-- Node.js 20+ (tested on 22)
-- npm 10+
-
-### 1. Clone and install
-
-```bash
-git clone <repo-url>
-cd "School Management System"
-
-# Install server dependencies
-cd server
-npm install
-
-# Install client dependencies
-cd ../client
-npm install
+```
+client/            React app: api, auth, components, hooks, pages, utils
+server/
+  src/
+    config/        validated environment variables
+    db/            Prisma client
+    middleware/    auth, RBAC, ownership checks, error handler, request logger
+    routes/        one router per module
+    controllers/   request parsing and responses only
+    services/      business rules and transactions
+    validators/    plain JavaScript validation functions
+    utils/         logger, AppError, asyncHandler
+  prisma/          schema, migrations, seed.js
+  tests/           integration and unit tests
+docs/              ER diagram, OpenAPI, technical report, screenshots
 ```
 
-### 2. Configure environment
+Every error uses one shape: `{ "error": "CODE", "message": "...", "details": [] }`.
 
-```bash
-cd ../server
-cp .env.example .env
-# Edit .env — set JWT_SECRET to a random string of 32+ characters
+## Database schema
+
+18 tables in SQLite, managed with Prisma migrations. Source of truth: [server/prisma/schema.prisma](server/prisma/schema.prisma). The Prisma model `Class` is shown as `SchoolClass` because `Class` is reserved in Mermaid.
+
+```mermaid
+erDiagram
+    User ||--o| Teacher : has_profile
+    User ||--o| Guardian : has_profile
+    User ||--o{ Attendance : records
+    User ||--o{ AuditLog : triggers
+
+    SchoolClass ||--o{ Section : contains
+    Section ||--o{ Student : enrolls
+    Section ||--o{ ClassSubject : assigns
+    Section ||--o{ Exam : schedules
+
+    Teacher ||--o{ ClassSubject : teaches
+    Subject ||--o{ ClassSubject : taught_in
+    Subject ||--o{ Exam : tested_in
+
+    Student ||--o{ GuardianStudent : linked_via
+    Guardian ||--o{ GuardianStudent : links_to
+
+    Student ||--o{ Attendance : has
+    Student ||--o{ ExamResult : receives
+    Student ||--o{ FeeInvoice : billed
+    Student ||--o{ FeeLedgerEntry : ledger
+
+    Exam ||--o{ ExamResult : contains
+
+    FeeType ||--o{ FeeInvoice : categorizes
+    FeeInvoice ||--o{ FeePayment : settled_by
+    FeeInvoice ||--o{ FeeLedgerEntry : debits
+    FeePayment ||--o{ FeeLedgerEntry : credits
+
+    User {
+        int id PK
+        string email UK
+        string password_hash
+        string role
+        datetime created_at
+        datetime updated_at
+    }
+
+    Teacher {
+        int id PK
+        int user_id FK
+        string name
+        string phone
+        datetime created_at
+        datetime updated_at
+    }
+
+    Guardian {
+        int id PK
+        int user_id FK
+        string name
+        string phone
+        datetime created_at
+        datetime updated_at
+    }
+
+    SchoolClass {
+        int id PK
+        string name UK
+        datetime created_at
+    }
+
+    Section {
+        int id PK
+        string name
+        int class_id FK
+        datetime created_at
+    }
+
+    Subject {
+        int id PK
+        string name
+        string code UK
+        datetime created_at
+    }
+
+    ClassSubject {
+        int id PK
+        int section_id FK
+        int subject_id FK
+        int teacher_id FK
+    }
+
+    Student {
+        int id PK
+        string name
+        string dob
+        string gender
+        string roll_number
+        int section_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    GuardianStudent {
+        int id PK
+        int guardian_id FK
+        int student_id FK
+        string relationship
+        datetime created_at
+    }
+
+    Attendance {
+        int id PK
+        int student_id FK
+        string date
+        string session
+        string status
+        int recorded_by_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    GradeRule {
+        int id PK
+        float min_percent
+        float max_percent
+        string grade
+        float grade_point
+    }
+
+    Exam {
+        int id PK
+        string name
+        int section_id FK
+        int subject_id FK
+        int max_marks
+        string exam_date
+        datetime created_at
+    }
+
+    ExamResult {
+        int id PK
+        int exam_id FK
+        int student_id FK
+        int marks_obtained
+        datetime calculated_at
+    }
+
+    FeeType {
+        int id PK
+        string name UK
+        int default_amount
+    }
+
+    FeeInvoice {
+        int id PK
+        int student_id FK
+        int fee_type_id FK
+        int amount_due
+        string due_date
+        string status
+        datetime created_at
+        datetime updated_at
+    }
+
+    FeePayment {
+        int id PK
+        int invoice_id FK
+        int amount_paid
+        string idempotency_key UK
+        datetime paid_at
+    }
+
+    FeeLedgerEntry {
+        int id PK
+        int student_id FK
+        int invoice_id FK
+        int payment_id FK
+        string entry_type
+        int amount
+        string description
+        datetime created_at
+    }
+
+    AuditLog {
+        int id PK
+        int user_id FK
+        string action
+        string entity_type
+        int entity_id
+        string meta
+        datetime created_at
+    }
 ```
 
-### 3. Run migrations and seed
+Key constraints:
 
-```bash
-npm run db:migrate   # creates dev.db and applies all migrations
-npm run db:seed      # populates with synthetic demo data matching prisma/seed.js
-```
-
-### 4. Start backend and frontend servers
-
-In terminal 1 (backend):
-```bash
-cd server
-npm run dev          # http://localhost:4000 (API & Swagger UI at /api-docs)
-```
-
-In terminal 2 (frontend):
-```bash
-cd client
-npm run dev          # http://localhost:5173
-```
-
----
-
-## Application URLs
-
-| Service / Interface | URL | Description |
+| Table | Constraint | Purpose |
 |---|---|---|
-| Frontend Web Client | `http://localhost:5173` | React application (Admin, Teacher, Guardian portals) |
-| Backend API Root | `http://localhost:4000` | Express REST API server |
-| Swagger UI API Docs | `http://localhost:4000/api-docs` | Interactive OpenAPI 3.0 specification |
-| Health Check | `http://localhost:4000/api/health` | Service uptime and status probe |
+| `attendance` | unique (student_id, date, session) | No duplicate attendance for the same student, date and session |
+| `fee_payments` | unique `idempotency_key` | A retried payment cannot be recorded twice |
+| `class_subjects` | unique (section_id, subject_id) | One teacher per subject in a section |
+| `guardian_students` | unique (guardian_id, student_id) | No duplicate guardian links |
+| `exam_results` | unique (exam_id, student_id) | One result per student per exam |
+| `sections` | unique (class_id, name) | No two sections with the same name in a class |
 
----
+Money fields are integer paise, dates are `YYYY-MM-DD` strings, and balances are computed from `fee_ledger_entries`. The same diagram is in [docs/er-diagram.md](docs/er-diagram.md).
 
-## Demo Credentials & Seed Data
+## Key design decisions
 
-The database seed (`server/prisma/seed.js`) provisions realistic synthetic accounts, classes, and records:
+- **Attendance upsert.** The database enforces uniqueness on (student, date, session). A duplicate submission updates the existing row and records the previous and new status in the audit log.
+- **Money in integer paise.** No floating-point amounts. Balances are never stored; they are computed from ledger entries.
+- **Payments.** One transaction re-reads the balance, rejects overpayment and payment on PAID or VOID invoices, then writes the payment, ledger entry, invoice status and audit log. The `Idempotency-Key` makes retries safe. A key reused by another user or for another invoice returns 409.
+- **Void as a reversing entry.** Voiding writes a reversing CREDIT instead of deleting rows, and is allowed only when no payments exist.
+- **Grades at read time.** Grades are not stored, so editing a grade rule updates report cards immediately. A base rule at 0% always exists.
+- **404 for unlinked students.** A guardian cannot confirm that another student exists.
+- **School timezone.** "Today" and the future-date check use `SCHOOL_TIMEZONE` (default Asia/Kolkata), not UTC.
 
-### User Credentials
+## Security
 
-| Role | Email | Password | Assigned Scope / Details |
-|---|---|---|---|
-| **Admin** | `admin@school.demo` | `Admin@123` | Institutional superuser (full access to academic setup, fees, reports, audit) |
-| **Teacher 1** | `teacher1@school.demo` | `Teacher@123` | Rajan Kumar — Assigned to **Grade 9 Section A** (Mathematics & Science) |
-| **Teacher 2** | `teacher2@school.demo` | `Teacher@123` | Priya Sharma — Assigned to **Grade 10 Section A** (Math, English) & **Grade 10 Section B** (History) |
-| **Guardian 1** | `guardian1@school.demo` | `Guardian@123` | Amit Singh — Linked children: **Rahul Singh** (`9A01`) & **Anjali Singh** (`9A02`) |
-| **Guardian 2** | `guardian2@school.demo` | `Guardian@123` | Sunita Verma — Linked children: **Priya Verma** (`10A01`) & **Karan Verma** (`10A02`) |
+- bcrypt-hashed passwords and JWTs with an 8 hour expiry
+- Authorization enforced on the server for every protected route, never only in the UI
+- Login rate limiting, helmet, and a configured CORS origin
+- The same error message for an unknown email and a wrong password
+- Audit log metadata scrubbed of passwords, hashes and tokens
+- No secrets committed; only `.env.example` is tracked
 
-### Example Seed Data
-
-- **Classes & Sections**:
-  - `Grade 9` &rarr; Section `A`
-  - `Grade 10` &rarr; Section `A`, Section `B`
-- **Subjects**:
-  - Mathematics (`MATH`), Science (`SCI`), English (`ENG`), History (`HIST`)
-- **Students**:
-  - **Grade 9-A**: Rahul Singh (`9A01`), Anjali Singh (`9A02`), Ravi Patel (`9A03`)
-  - **Grade 10-A**: Priya Verma (`10A01`), Karan Verma (`10A02`)
-  - **Grade 10-B**: Sneha Gupta (`10B01`), Vikram Joshi (`10B02`)
-- **Exams**:
-  - `Mid-Term Mathematics` (Section 9-A, Subject: MATH, Max Marks: 100, Date: 2026-10-15)
-  - `Mid-Term Science` (Section 9-A, Subject: SCI, Max Marks: 100, Date: 2026-10-17)
-  - Results entered for Rahul, Anjali, and Ravi.
-- **Grade Rules (Scale)**:
-  - `A+` (90.00% – 100.00%, GP 10)
-  - `A` (80.00% – 89.99%, GP 9)
-  - `B+` (70.00% – 79.99%, GP 8)
-  - `B` (60.00% – 69.99%, GP 7)
-  - `C` (50.00% – 59.99%, GP 6)
-  - `F` (0.00% – 49.99%, GP 0) &mdash; Protected base rule guard
-- **Fee Types & Invoices**:
-  - `Tuition Fee`: ₹5,000 (500,000 paise)
-  - `Library Fee`: ₹500 (50,000 paise)
-  - Invoices generated for all 7 students; Rahul Singh has one full payment recorded (`PAID`, ₹5,000 credit in fee ledger).
-
----
-
-## NPM Scripts
-
-### Server (`server/`)
-
-| Script | Action |
-|---|---|
-| `npm run dev` | Start server with file watcher |
-| `npm start` | Start server (production) |
-| `npm test` | Run all Vitest backend tests (13 test files, 161 tests) |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run db:migrate` | Apply pending migrations |
-| `npm run db:seed` | Reset and seed demo data |
-| `npm run db:reset` | Drop all tables and re-migrate (destructive) |
-
-### Client (`client/`)
-
-| Script | Action |
-|---|---|
-| `npm run dev` | Start Vite dev server on `http://localhost:5173` |
-| `npm run build` | Build production bundle in `dist/` |
-| `npm test` | Run all Vitest frontend unit tests (3 test files, 17 tests) |
-| `npm run preview` | Locally preview production build |
-
----
-
-## Environment Variables
+## Environment variables
 
 See [server/.env.example](server/.env.example).
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | Yes | Prisma SQLite path, e.g. `file:./dev.db` |
-| `JWT_SECRET` | Yes | Min 32-char random string |
+| `DATABASE_URL` | Yes | SQLite path, for example `file:./dev.db` |
+| `JWT_SECRET` | Yes | Random string, 32+ characters |
 | `JWT_EXPIRES_IN` | No | Token lifetime, default `8h` |
-| `PORT` | No | HTTP port, default `4000` |
-| `BCRYPT_ROUNDS` | No | bcrypt cost factor, default `10` |
-| `CORS_ORIGIN` | No | Allowed origin, default `http://localhost:5173` |
-| `CLIENT_ORIGIN` | No | Allowed frontend origin for Vite dev, default `http://localhost:5173` |
-| `LOGIN_RATE_LIMIT_MAX` | No | Max login attempts per window, default `30` (higher in test env) |
-| `LOGIN_RATE_LIMIT_WINDOW_MIN` | No | Window duration in minutes for login rate limit, default `15` |
-| `SCHOOL_TIMEZONE` | No | School timezone for future-date attendance and daily metrics, default `Asia/Kolkata` |
-| `LOG_SILENT` | No | Set `true` during tests to suppress logs |
+| `PORT` | No | Default `4000` |
+| `BCRYPT_ROUNDS` | No | Default `10` |
+| `CORS_ORIGIN`, `CLIENT_ORIGIN` | No | Allowed frontend origin, default `http://localhost:5173` |
+| `LOGIN_RATE_LIMIT_MAX` | No | Login attempts per window, default `30` |
+| `LOGIN_RATE_LIMIT_WINDOW_MIN` | No | Window in minutes, default `15` |
+| `SCHOOL_TIMEZONE` | No | Default `Asia/Kolkata` |
+| `LOG_SILENT` | No | Set `true` to silence logs during tests |
 
----
+## Scripts
 
-## API Documentation
+| Location | Command | Purpose |
+|---|---|---|
+| server | `npm run dev` / `npm start` | Run the API |
+| server | `npm test` / `npm run test:watch` | Backend tests (the test database `test.db` is reset automatically) |
+| server | `npm run db:migrate` / `db:seed` / `db:reset` | Migrate, seed, reset the database |
+| client | `npm run dev` / `npm run build` / `npm run preview` | Run, build or preview the frontend |
+| client | `npm test` | Frontend unit tests |
 
-Swagger UI is served at `http://localhost:4000/api-docs`.
+Total automated tests: 178 (161 backend, 17 frontend).
 
----
+## Demo walkthrough
 
-## ER Diagram
+Start both servers and open `http://localhost:5173`. 
 
-See [docs/er-diagram.md](docs/er-diagram.md).
-
----
-
-## Running Tests
-
-### Backend Tests (14 test files, 169 tests)
-
-```bash
-cd server
-npm test           # single run, resets test.db before suite
-npm run test:watch # interactive watch mode
-```
-
-The server test suite uses a separate `test.db` database that is wiped and re-migrated automatically before each test suite run.
-
-### Frontend Tests (3 test files, 17 tests)
-
-```bash
-cd client
-npm test           # runs Vitest for API client, idempotency key, and currency utils
-```
-
-**Total automated test coverage**: 17 test files, 186 tests, 100% passing.
-
----
-
-## Demo Walkthrough
-
-Visual evidence and UI screenshots for each acceptance test scenario are organized in the [docs/screenshots/](docs/screenshots/) folder.
-
-To perform the manual end-to-end evaluation, start both servers (`npm run dev` in `server` and `npm run dev` in `client`), navigate to `http://localhost:5173`, and follow the steps below:
-
-### 1. Acceptance Test 1: Teacher Class Scoping & Attendance
-- **Seed Account**: `teacher1@school.demo` / `Teacher@123` (Rajan Kumar)
-- **Goal**: Verify teacher access is strictly scoped to assigned sections, and attendance is recorded cleanly.
-- **Steps**:
-  1. Log in as Teacher 1.
-  2. Navigate to **My Sections** (`/teacher/sections`). Confirm that only **Grade 9 Section A** appears (assigned for Mathematics and Science). Section 10-A and 10-B are completely excluded.
-  3. Navigate to **Attendance** (`/teacher/attendance`). The section dropdown lists only Section 9-A.
-  4. Select session **MORNING** and today's date (defaults to current date in school timezone `Asia/Kolkata`).
-  5. The student roster displays **Rahul Singh** (`9A01`), **Anjali Singh** (`9A02`), and **Ravi Patel** (`9A03`).
-  6. Click **Mark All Present** (or toggle individual status pills) and click **Submit Attendance**.
-  7. A green confirmation banner confirms records saved with created count.
-
-### 2. Acceptance Test 2: Duplicate Attendance Rejection & Safe Upsert
-- **Seed Account**: `teacher1@school.demo` / `Teacher@123`
-- **Goal**: Confirm that re-submitting attendance for the same student/date/session does not create duplicate rows, safely updates status, and logs changes.
-- **Steps**:
-  1. On the **Attendance** page (`/teacher/attendance`), choose Grade 9-A, session MORNING, and the same date used in Test 1.
-  2. The page detects existing records and pre-populates existing statuses with a notice informing you that changes will update the records.
-  3. Change Rahul Singh's status from **PRESENT** to **LATE** and click **Submit Attendance**.
-  4. The success banner displays: `Attendance updated: 0 created, 3 updated`.
-  5. Log out and log in as Admin (`admin@school.demo` / `Admin@123`). Navigate to **Audit Logs** (`/admin/audit-logs`).
-  6. Inspect the latest `ATTENDANCE_UPDATED` entry: the metadata reflects `previousStatus: "PRESENT"` and `newStatus: "LATE"`, verifying zero duplicate database rows and full audit traceability.
-
-### 3. Acceptance Test 3: Dynamic Grade Calculation from Configured Rules
-- **Seed Account**: `admin@school.demo` / `Admin@123` & `guardian1@school.demo` / `Guardian@123`
-- **Goal**: Verify that report card grades are computed dynamically from `GradeRule` rather than statically stored, and modifying grade boundaries updates grades immediately.
-- **Steps**:
-  1. Log in as Guardian 1 (`guardian1@school.demo` / `Guardian@123`).
-  2. Click **Overview** for child **Rahul Singh** (`9A01`). For `Mid-Term Mathematics` (Score: 85/100, 85.00%), his current grade is **A** (rule: 80% to 89.99%).
-  3. Log out and log in as Admin (`admin@school.demo` / `Admin@123`).
-  4. Navigate to **Exams & Grading** (`/admin/exams`) and scroll to **Grade Rules Scale**.
-  5. Edit the Grade `A` rule to increase the minimum threshold from `80` to `86`, and adjust `B+` maximum from `79.99` to `85.99`. Save the changes.
-  6. Log back in as Guardian 1 and view Rahul Singh's report card. His letter grade for 85% dynamically changes to **B+** without any marks table modification.
-  7. *(Optional cleanup)*: Revert Grade `A` minPercent back to `80` and `B+` maxPercent to `79.99`.
-
-### 4. Acceptance Test 4: Guardian Child Scoping & Privacy Preservation
-- **Seed Account**: `guardian1@school.demo` / `Guardian@123` (Amit Singh)
-- **Goal**: Confirm guardians only see their linked children, and attempting to view unlinked students returns privacy-preserving 404s.
-- **Steps**:
-  1. Log in as Guardian 1.
-  2. Navigate to **My Children** (`/guardian/children`). Confirm only linked children **Rahul Singh** and **Anjali Singh** are displayed. Children of other guardians (e.g., Priya Verma, Karan Verma) are not shown.
-  3. Click **Overview** for Rahul Singh. View his attendance summary, report card, and fee invoices.
-  4. In the browser address bar, modify the URL student ID to an unlinked student ID (e.g. Priya Verma's ID) or trigger an API request to `/api/guardian/students/<other-id>/overview`.
-  5. The application renders a clear "Student not found or not linked to your account" error (`404 NOT_FOUND`). The system deliberately returns 404 rather than 403 to prevent student ID enumeration.
-
-### 5. Acceptance Test 5: Fee Due + Paid = Ledger Balance
-- **Seed Account**: `guardian1@school.demo` / `Guardian@123` & `admin@school.demo` / `Admin@123`
-- **Goal**: Confirm dynamic double-entry ledger calculation, partial payments, idempotency replay, and overpayment prevention.
-- **Steps**:
-  1. Log in as Guardian 1 and go to child Anjali Singh's fees page (`/guardian/fees`).
-  2. Observe her Tuition Fee invoice: Invoiced `₹5,000.00` (`500000` paise), Status: `UNPAID`, Balance: `₹5,000.00`.
-  3. Under the simulated payment form ("Simulated payment, no real money"), enter `2500` (₹2,500.00) and click **Pay via Simulated Gateway**.
-  4. The invoice status transitions to `PARTIALLY_PAID` with Remaining Balance `₹2,500.00`. The ledger below shows the original `DEBIT` of ₹5,000.00 and a new `CREDIT` of ₹2,500.00.
-  5. Attempt to pay `3000` (exceeding the ₹2,500 balance). An inline validation error clearly prevents overpayment: `Payment amount cannot exceed the remaining balance`.
-  6. Enter the exact remaining `2500` and submit. The invoice status updates to `PAID` with Remaining Balance `₹0.00`.
-  7. Log in as Admin (`admin@school.demo` / `Admin@123`) &rarr; **Fee Invoices** (`/admin/fees`). View Anjali Singh's invoice detail ledger. Total Invoiced (₹5,000) minus Total Paid (₹5,000) = ₹0.00 balance, exactly matching the sum of ledger DEBIT and CREDIT entries.
-
----
+1. **Teacher scope.** Log in as Teacher 1. Only Grade 9-A appears. Open Attendance, pick a session, click Mark All Present and save.
+2. **Duplicate attendance.** Save the same date and session again. An update notice appears and the result shows 0 created, 3 updated. Log in as Admin and open Audit Logs to see the previous and new status.
+3. **Grade rules.** As Guardian 1, open Rahul Singh's report card (Mid-Term Mathematics, 85/100). As Admin, open Exams and edit the grade rules so that 85% falls in a different band. Reload the report card and the grade changes with no change to the marks.
+4. **Guardian privacy.** As Guardian 1, only Rahul and Anjali are listed. Change the student ID in the URL to a student linked to Guardian 2 and the app shows a not-found page (the API returns 404, not 403).
+5. **Fees and ledger.** As Guardian 1, open Anjali's Tuition Fee invoice (₹5,000, UNPAID). Make a simulated partial payment (status PARTIAL), try to overpay (rejected), then pay the remainder (status PAID). As Admin, open Fee Invoices and compare the ledger with the totals.
 
 ## Deployment
 
-For deploying the backend to **Render** and frontend to **Vercel**, refer to the comprehensive step-by-step guide:
-👉 **[Deployment Guide (Render & Vercel)](docs/deployment-guide.md)**
+Backend on Render and frontend on Vercel. See [docs/deployment-guide.md](docs/deployment-guide.md) for the build and start commands, environment variables, and the SPA rewrite configuration. The hosted database is reseeded on restart.
 
-Includes instructions for:
-- One-click Render Blueprint (`render.yaml`) configuration
-- Vercel client-side SPA routing (`vercel.json`)
-- Environment variable configuration (`VITE_API_BASE_URL` & `CLIENT_ORIGIN`)
-- Automated database migrations and demo seed on deployment
+## Assumptions
 
----
+- Attendance rate is (PRESENT + LATE) / total recorded sessions. Sessions with no attendance taken are not counted.
+- Teacher access is by section through class-subject assignments. A teacher assigned to Grade 9-A cannot access Grade 9-B, and teachers get 403 on all fee routes.
+- A guardian requesting a student not linked to them gets 404, not 403, to prevent ID enumeration.
+- Payments are simulated. No real gateway, card or banking data exists.
+- All records are synthetic.
 
-## Known Limitations / Assumptions
+## Known limitations
 
-- **Upsert on duplicate attendance:** Attendance records have a unique constraint on `(student_id, date, session)`. When an attendance record is submitted for an existing slot, the system updates the status (upsert) and records an immutable audit log entry capturing both previous and new statuses for complete traceability.
-- **Attendance rate formula:** Attendance percentage is computed as `((PRESENT + LATE) / totalSessions) * 100`, rounded to two decimal places. Days or sessions without attendance taken are excluded from the denominator.
-- **Teacher ownership by section:** Teachers have granular role-based access restricted strictly to their assigned class sections via `ClassSubject`. Teachers can only record attendance, enter grades, and view reports for sections they teach (attempting access to unassigned sections returns `403 FORBIDDEN`). Teachers are completely blocked from all fee and financial routes (`403 FORBIDDEN`).
-- **404 for unlinked students (Privacy Preservation):** When a guardian attempts to access a student profile, attendance summary, report card, or fee invoice that is not linked to them in `GuardianStudent`, the API responds with `404 NOT_FOUND` rather than `403 FORBIDDEN`. This prevents attackers or unauthorized guardians from enumerating valid student IDs or confirming student enrollment.
-- **SQLite concurrency note:** SQLite operates with file-level write locking. All multi-step operations (invoice creation, bulk invoicing, idempotent payment processing, voiding) execute inside Prisma interactive `$transaction` blocks. Under intense concurrent writes, lock conflicts (`SQLITE_BUSY`, `SQLITE_LOCKED`, `P2034`) are intercepted by the centralized error handler and mapped to a clean `503 SERVICE_UNAVAILABLE` rather than unhandled 500 errors. For production horizontal scaling, PostgreSQL or MySQL should replace SQLite.
-- **Simulated payments only:** Payment processing is simulated without external banking or payment gateway integration. Balances are never statically stored on invoices; they are computed dynamically from `FeeLedgerEntry` (`SUM(DEBIT) - SUM(CREDIT)`). Every payment requires a unique `Idempotency-Key` header to protect against network replays and double charges.
+- **SQLite single writer.** Writes are serialized by a file-level lock. Lock conflicts (`SQLITE_BUSY`, `SQLITE_LOCKED`, `P2034`) return a clean 503. PostgreSQL with row-level locking is the production choice.
+- **In-memory rate limiter.** Limits reset on restart and are not shared across instances.
+- **JWT in localStorage.** The token is exposed to XSS. A production system would use a short-lived access token with a rotating refresh token in an httpOnly cookie.
+- **No token revocation.** Tokens stay valid until they expire (8 hours).
+- **Simulated payments only.** No external payment gateway.
+- **Demo data resets** whenever the hosted service restarts.
+- **No email or SMS notifications.** Confirmations are returned in API responses only.
 
----
+## AI usage
 
-## Technical Report
-
-See [docs/technical-report.md](docs/technical-report.md).
+I used Claude Sonnet 4.6 and 5.5 to generate code templates, write repetitive code (CRUD routes, validators, boilerplate) and generate test cases. For the frontend, I wrote the initial React code and logic with basic Tailwind styling, then used Gemini 3.8 Flash to improve the UI/UX on top of that code. I built the project in phases. After each phase I had the AI review the work against the brief and I also checked it myself by running the tests and trying the features. Libraries used: Express, Prisma, React, Vite, Tailwind CSS, TanStack Query, React Router, bcrypt, jsonwebtoken, helmet, cors, express-rate-limit, swagger-ui-express, Vitest, Supertest. See [docs/technical-report.md](docs/technical-report.md) for design details.
