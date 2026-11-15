@@ -296,6 +296,19 @@ To perform the manual end-to-end evaluation, start both servers (`npm run dev` i
 
 ---
 
+## Deployment
+
+For deploying the backend to **Render** and frontend to **Vercel**, refer to the comprehensive step-by-step guide:
+👉 **[Deployment Guide (Render & Vercel)](docs/deployment-guide.md)**
+
+Includes instructions for:
+- One-click Render Blueprint (`render.yaml`) configuration
+- Vercel client-side SPA routing (`vercel.json`)
+- Environment variable configuration (`VITE_API_BASE_URL` & `CLIENT_ORIGIN`)
+- Automated database migrations and demo seed on deployment
+
+---
+
 ## Known Limitations / Assumptions
 
 - **Upsert on duplicate attendance:** Attendance records have a unique constraint on `(student_id, date, session)`. When an attendance record is submitted for an existing slot, the system updates the status (upsert) and records an immutable audit log entry capturing both previous and new statuses for complete traceability.

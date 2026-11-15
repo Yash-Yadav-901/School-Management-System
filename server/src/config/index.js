@@ -1,3 +1,18 @@
+import fs from 'fs';
+import path from 'path';
+
+// Automatically load local .env if present (without crashing if absent in production)
+if (typeof process.loadEnvFile === 'function') {
+  const envPath = path.resolve('.env');
+  if (fs.existsSync(envPath)) {
+    try {
+      process.loadEnvFile(envPath);
+    } catch {
+      // Ignored if file cannot be read
+    }
+  }
+}
+
 // All environment variables are read and validated once at startup.
 // Missing required variables crash the process immediately with a clear message.
 

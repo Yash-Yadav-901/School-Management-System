@@ -3,6 +3,8 @@ import { logger } from '../utils/logger.js';
 export const TOKEN_KEY = 'sms_auth_token';
 export const USER_KEY = 'sms_auth_user';
 
+const BASE_URL = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+
 export class ApiClientError extends Error {
   constructor(status, code, message, details = []) {
     super(message || 'An error occurred while processing your request.');
@@ -41,7 +43,8 @@ export function clearSession() {
 
 export async function apiClient(endpoint, options = {}) {
   const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const fullUrl = url.startsWith('/api') ? url : `/api${url}`;
+  const apiPath = url.startsWith('/api') ? url : `/api${url}`;
+  const fullUrl = BASE_URL ? `${BASE_URL}${apiPath}` : apiPath;
 
   const token = getToken();
   const headers = {

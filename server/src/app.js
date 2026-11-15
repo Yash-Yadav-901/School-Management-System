@@ -30,14 +30,30 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(helmet());
 
-const allowedOrigins = Array.from(
-  new Set([config.clientOrigin, config.corsOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean))
+const rawOrigins = [
+  config.clientOrigin,
+  config.corsOrigin,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+].filter(Boolean);
+
+const allowedOrigins = new Set(
+  rawOrigins
+    .flatMap((o) => (typeof o === 'string' ? o.split(',') : []))
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
 );
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        allowedOrigins.has(cleanOrigin) ||
+        cleanOrigin.endsWith('.vercel.app') ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         return callback(null, true);
       }
       return callback(null, false);
