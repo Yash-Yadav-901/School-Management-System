@@ -7,7 +7,7 @@ A full-stack web application for managing school operations — built for the Al
 ## Architecture
 
 ```
-client/        React 18 + Vite + Tailwind CSS (Phase 8+)
+client/        React 18 + Vite + Tailwind CSS 
 server/        Node.js + Express, ES modules
   src/
     config/    Environment variable validation
@@ -198,19 +198,19 @@ See [server/.env.example](server/.env.example).
 
 ## API Documentation
 
-Swagger UI is served at `http://localhost:4000/api-docs` (Phase 7+).
+Swagger UI is served at `http://localhost:4000/api-docs`.
 
 ---
 
 ## ER Diagram
 
-See [docs/er-diagram.md](docs/er-diagram.md) (Phase 7+).
+See [docs/er-diagram.md](docs/er-diagram.md).
 
 ---
 
 ## Running Tests
 
-### Backend Tests (13 test files, 161 tests)
+### Backend Tests (14 test files, 169 tests)
 
 ```bash
 cd server
@@ -227,7 +227,7 @@ cd client
 npm test           # runs Vitest for API client, idempotency key, and currency utils
 ```
 
-**Total automated test coverage**: 16 test files, 178 tests, 100% passing.
+**Total automated test coverage**: 17 test files, 186 tests, 100% passing.
 
 ---
 
@@ -322,4 +322,4 @@ Includes instructions for:
 
 ## Technical Report
 
-See [docs/technical-report.md](docs/technical-report.md) (Phase 10).
+See [docs/technical-report.md](docs/technical-report.md).
