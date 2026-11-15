@@ -75,6 +75,18 @@ app.use(
   })
 );
 
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'School Management System API',
+    status: 'online',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      docs: '/api-docs',
+    },
+  });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
