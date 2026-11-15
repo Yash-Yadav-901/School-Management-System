@@ -2,49 +2,51 @@
 
 This diagram represents the relational database schema defined in `server/prisma/schema.prisma` (SQLite engine).
 
+> **Note:** The `Class` model is labeled as `SchoolClass` in this diagram because `Class` is a reserved keyword in Mermaid.
+
 ```mermaid
 erDiagram
-    User ||--o| Teacher : "has profile"
-    User ||--o| Guardian : "has profile"
-    User ||--o{ Attendance : "records"
-    User ||--o{ AuditLog : "triggers"
+    User ||--o| Teacher : has_profile
+    User ||--o| Guardian : has_profile
+    User ||--o{ Attendance : records
+    User ||--o{ AuditLog : triggers
 
-    Class ||--o{ Section : "contains"
-    Section ||--o{ Student : "enrolls"
-    Section ||--o{ ClassSubject : "assigns"
-    Section ||--o{ Exam : "schedules"
+    SchoolClass ||--o{ Section : contains
+    Section ||--o{ Student : enrolls
+    Section ||--o{ ClassSubject : assigns
+    Section ||--o{ Exam : schedules
 
-    Teacher ||--o{ ClassSubject : "assigned to"
-    Subject ||--o{ ClassSubject : "assigned in"
-    Subject ||--o{ Exam : "tested in"
+    Teacher ||--o{ ClassSubject : teaches
+    Subject ||--o{ ClassSubject : taught_in
+    Subject ||--o{ Exam : tested_in
 
-    Student ||--o{ GuardianStudent : "linked via"
-    Guardian ||--o{ GuardianStudent : "links to"
+    Student ||--o{ GuardianStudent : linked_via
+    Guardian ||--o{ GuardianStudent : links_to
 
-    Student ||--o{ Attendance : "has"
-    Student ||--o{ ExamResult : "receives"
-    Student ||--o{ FeeInvoice : "billed"
-    Student ||--o{ FeeLedgerEntry : "ledger"
+    Student ||--o{ Attendance : has
+    Student ||--o{ ExamResult : receives
+    Student ||--o{ FeeInvoice : billed
+    Student ||--o{ FeeLedgerEntry : ledger
 
-    Exam ||--o{ ExamResult : "contains"
+    Exam ||--o{ ExamResult : contains
 
-    FeeType ||--o{ FeeInvoice : "categorizes"
-    FeeInvoice ||--o{ FeePayment : "settled by"
-    FeeInvoice ||--o{ FeeLedgerEntry : "generates debit"
-    FeePayment ||--o{ FeeLedgerEntry : "generates credit"
+    FeeType ||--o{ FeeInvoice : categorizes
+    FeeInvoice ||--o{ FeePayment : settled_by
+    FeeInvoice ||--o{ FeeLedgerEntry : debits
+    FeePayment ||--o{ FeeLedgerEntry : credits
 
     User {
         int id PK
         string email UK
         string password_hash
-        string role "ADMIN | TEACHER | GUARDIAN"
+        string role
         datetime created_at
         datetime updated_at
     }
 
     Teacher {
         int id PK
-        int user_id FK,UK
+        int user_id FK
         string name
         string phone
         datetime created_at
@@ -53,14 +55,14 @@ erDiagram
 
     Guardian {
         int id PK
-        int user_id FK,UK
+        int user_id FK
         string name
         string phone
         datetime created_at
         datetime updated_at
     }
 
-    Class {
+    SchoolClass {
         int id PK
         string name UK
         datetime created_at
@@ -109,9 +111,9 @@ erDiagram
     Attendance {
         int id PK
         int student_id FK
-        string date "YYYY-MM-DD"
-        string session "MORNING | AFTERNOON"
-        string status "PRESENT | ABSENT | LATE"
+        string date
+        string session
+        string status
         int recorded_by_id FK
         datetime created_at
         datetime updated_at
@@ -131,7 +133,7 @@ erDiagram
         int section_id FK
         int subject_id FK
         int max_marks
-        string exam_date "YYYY-MM-DD"
+        string exam_date
         datetime created_at
     }
 
@@ -153,9 +155,9 @@ erDiagram
         int id PK
         int student_id FK
         int fee_type_id FK
-        int amount_due "paise"
-        string due_date "YYYY-MM-DD"
-        string status "UNPAID | PARTIAL | PAID | VOID"
+        int amount_due
+        string due_date
+        string status
         datetime created_at
         datetime updated_at
     }
@@ -163,7 +165,7 @@ erDiagram
     FeePayment {
         int id PK
         int invoice_id FK
-        int amount_paid "paise"
+        int amount_paid
         string idempotency_key UK
         datetime paid_at
     }
@@ -173,8 +175,8 @@ erDiagram
         int student_id FK
         int invoice_id FK
         int payment_id FK
-        string entry_type "DEBIT | CREDIT"
-        int amount "paise"
+        string entry_type
+        int amount
         string description
         datetime created_at
     }
@@ -185,8 +187,7 @@ erDiagram
         string action
         string entity_type
         int entity_id
-        string meta "JSON"
+        string meta
         datetime created_at
     }
 ```
-
