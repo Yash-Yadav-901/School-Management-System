@@ -98,9 +98,9 @@ The automated test suite consists of 16 test files and 178 tests (161 backend te
 ---
 
 ## 7. AI Usage
-- **Development Assistant**: The Antigravity AI assistant operated as an integrated pair programmer across all phases of the project.
+- **Development Assistant**: I used Claude Sonnet 4.6 and 5.5 AI code to generate and get code templates and to write repateive codes and develop this project.
 - **Responsibilities Handled by AI**: Scaffolding repetitive CRUD routes, generating comprehensive integration test assertions across edge and boundary conditions, drafting the OpenAPI 3.0 specification, verifying timezone conversion logic, implementing modal focus-trap hooks, and auditing mobile viewport layouts.
-- **Human Guidance & Guardrails**: System architecture, schema normalization, integer paise financial constraints, zero third-party UI library requirements, and idempotency key lifecycle policies were directed and reviewed by human engineering requirements.
+- **Human Guidance & Guardrails**: System architecture, schema normalization, integer paise financial constraints, zero third-party UI library requirements, and idempotency key lifecycle policies were directed and reviewed by me.
 
 ---
 
