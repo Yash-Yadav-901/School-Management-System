@@ -100,6 +100,13 @@ export async function apiClient(endpoint, options = {}) {
     } catch {
       data = null;
     }
+  } else if (contentType.includes('text/html')) {
+    logger.apiError(response.status, 'HTML_RESPONSE_ERROR', fullUrl, 'Received HTML instead of JSON');
+    throw new ApiClientError(
+      response.status,
+      'HTML_RESPONSE_ERROR',
+      'The API endpoint returned HTML instead of JSON. Ensure your backend server is running and VITE_API_BASE_URL is configured correctly.'
+    );
   } else {
     data = await response.text();
   }

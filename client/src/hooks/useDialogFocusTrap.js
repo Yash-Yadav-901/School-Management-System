@@ -10,6 +10,8 @@ import { useEffect, useRef } from 'react';
 export function useDialogFocusTrap(isOpen, onClose) {
   const containerRef = useRef(null);
   const previousActiveElementRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -19,7 +21,7 @@ export function useDialogFocusTrap(isOpen, onClose) {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current?.();
         return;
       }
 
@@ -49,14 +51,19 @@ export function useDialogFocusTrap(isOpen, onClose) {
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Initial focus on first input or button
+    // Initial focus on first input or interactive field (prioritize input over close button)
     const timer = setTimeout(() => {
       if (containerRef.current) {
-        const focusables = containerRef.current.querySelectorAll(
-          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+        const primaryInput = containerRef.current.querySelector(
+          'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
         );
-        if (focusables.length > 0) {
-          focusables[0].focus();
+        if (primaryInput) {
+          primaryInput.focus();
+        } else {
+          const firstFocusable = containerRef.current.querySelector(
+            'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (firstFocusable) firstFocusable.focus();
         }
       }
     }, 40);
@@ -68,7 +75,7 @@ export function useDialogFocusTrap(isOpen, onClose) {
         previousActiveElementRef.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return containerRef;
 }

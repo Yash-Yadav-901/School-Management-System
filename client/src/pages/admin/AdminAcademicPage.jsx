@@ -276,7 +276,9 @@ export function AdminAcademicPage() {
   }
 
   function handleSubmit(e) {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     setFormError(null);
 
     const validationMsg = currentConfig.validate(formData, modalMode === 'edit');
@@ -731,6 +733,7 @@ export function AdminAcademicPage() {
                   type="submit"
                   variant="primary"
                   isLoading={createMutation.isPending || updateMutation.isPending}
+                  onClick={handleSubmit}
                 >
                   {modalMode === 'create' ? `Create ${currentConfig.singular}` : 'Save Changes'}
                 </Button>
