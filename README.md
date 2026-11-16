@@ -101,7 +101,7 @@ server/
     utils/         logger, AppError, asyncHandler
   prisma/          schema, migrations, seed.js
   tests/           integration and unit tests
-docs/              ER diagram, OpenAPI, technical report, screenshots
+docs/              ER diagram, OpenAPI, technical report
 ```
 
 Every error uses one shape: `{ "error": "CODE", "message": "...", "details": [] }`.
