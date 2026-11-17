@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client.js';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -37,8 +37,20 @@ export function AdminStudentsPage() {
   const [deleteConflictError, setDeleteConflictError] = useState(null);
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState(null);
 
+  const closeModal = useCallback(() => {
+    setModalMode(null);
+    setEditingStudent(null);
+    setFormErrors({});
+    setActionError(null);
+  }, []);
+
+  const handleDeleteClose = useCallback(() => {
+    setDeleteConfirmStudent(null);
+    setDeleteConflictError(null);
+  }, []);
+
   const formModalRef = useDialogFocusTrap(Boolean(modalMode), closeModal);
-  const deleteModalRef = useDialogFocusTrap(Boolean(deleteConfirmStudent), () => setDeleteConfirmStudent(null));
+  const deleteModalRef = useDialogFocusTrap(Boolean(deleteConfirmStudent), handleDeleteClose);
 
   // Fetch sections for filter and form dropdowns
   const { data: sectionsResponse } = useQuery({
@@ -151,13 +163,6 @@ export function AdminStudentsPage() {
       gender: student.gender || 'MALE',
       sectionId: student.sectionId ? String(student.sectionId) : '',
     });
-    setFormErrors({});
-    setActionError(null);
-  }
-
-  function closeModal() {
-    setModalMode(null);
-    setEditingStudent(null);
     setFormErrors({});
     setActionError(null);
   }

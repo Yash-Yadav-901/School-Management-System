@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client.js';
 import { formatPaiseToRupees, parseRupeesToPaise } from '../../utils/formatCurrency.js';
@@ -29,9 +29,16 @@ export function AdminFeesPage() {
   const [voidConfirmInvoice, setVoidConfirmInvoice] = useState(null);
   const [voidError, setVoidError] = useState(null);
 
-  const createModalRef = useDialogFocusTrap(createModalOpen, () => setCreateModalOpen(false));
-  const voidModalRef = useDialogFocusTrap(Boolean(voidConfirmInvoice), () => setVoidConfirmInvoice(null));
-  const detailModalRef = useDialogFocusTrap(Boolean(selectedInvoiceId), () => setSelectedInvoiceId(null));
+  const handleCloseCreate = useCallback(() => setCreateModalOpen(false), []);
+  const handleCloseVoid = useCallback(() => {
+    setVoidConfirmInvoice(null);
+    setVoidError(null);
+  }, []);
+  const handleCloseDetail = useCallback(() => setSelectedInvoiceId(null), []);
+
+  const createModalRef = useDialogFocusTrap(createModalOpen, handleCloseCreate);
+  const voidModalRef = useDialogFocusTrap(Boolean(voidConfirmInvoice), handleCloseVoid);
+  const detailModalRef = useDialogFocusTrap(Boolean(selectedInvoiceId), handleCloseDetail);
 
   // Single Invoice Form
   const [invoiceForm, setInvoiceForm] = useState({

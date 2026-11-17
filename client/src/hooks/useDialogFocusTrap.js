@@ -51,9 +51,14 @@ export function useDialogFocusTrap(isOpen, onClose) {
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Initial focus on first input or interactive field (prioritize input over close button)
+    // Initial focus on first input or interactive field (only if focus is not already inside)
     const timer = setTimeout(() => {
       if (containerRef.current) {
+        // If the user already focused an input inside the dialog, do not steal focus!
+        if (containerRef.current.contains(document.activeElement)) {
+          return;
+        }
+
         const primaryInput = containerRef.current.querySelector(
           'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
         );
@@ -72,7 +77,11 @@ export function useDialogFocusTrap(isOpen, onClose) {
       window.removeEventListener('keydown', handleKeyDown);
       clearTimeout(timer);
       if (previousActiveElementRef.current && typeof previousActiveElementRef.current.focus === 'function') {
-        previousActiveElementRef.current.focus();
+        try {
+          previousActiveElementRef.current.focus();
+        } catch {
+          // ignore if previous element no longer exists
+        }
       }
     };
   }, [isOpen]);

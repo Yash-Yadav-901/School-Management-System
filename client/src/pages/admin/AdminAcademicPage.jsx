@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client.js';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -37,8 +37,18 @@ export function AdminAcademicPage() {
   const [conflictError, setConflictError] = useState(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
 
-  const formModalRef = useDialogFocusTrap(Boolean(modalMode), () => setModalMode(null));
-  const deleteModalRef = useDialogFocusTrap(Boolean(deleteConfirmItem), () => setDeleteConfirmItem(null));
+  const handleCloseModal = useCallback(() => {
+    setModalMode(null);
+    setFormError(null);
+  }, []);
+
+  const handleDeleteClose = useCallback(() => {
+    setDeleteConfirmItem(null);
+    setConflictError(null);
+  }, []);
+
+  const formModalRef = useDialogFocusTrap(Boolean(modalMode), handleCloseModal);
+  const deleteModalRef = useDialogFocusTrap(Boolean(deleteConfirmItem), handleDeleteClose);
 
   function resetState() {
     setPage(1);

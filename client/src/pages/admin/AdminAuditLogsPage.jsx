@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client.js';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -32,7 +32,8 @@ export function AdminAuditLogsPage() {
   const [endDate, setEndDate] = useState('');
   const [selectedMetaLog, setSelectedMetaLog] = useState(null);
 
-  const metaModalRef = useDialogFocusTrap(Boolean(selectedMetaLog), () => setSelectedMetaLog(null));
+  const handleCloseMeta = useCallback(() => setSelectedMetaLog(null), []);
+  const metaModalRef = useDialogFocusTrap(Boolean(selectedMetaLog), handleCloseMeta);
 
   const {
     data: auditResponse,

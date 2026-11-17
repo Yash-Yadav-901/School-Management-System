@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client.js';
@@ -14,7 +14,8 @@ export function TeacherSectionsPage() {
   const navigate = useNavigate();
   const [selectedSection, setSelectedSection] = useState(null);
 
-  const rosterModalRef = useDialogFocusTrap(Boolean(selectedSection), () => setSelectedSection(null));
+  const handleCloseRoster = useCallback(() => setSelectedSection(null), []);
+  const rosterModalRef = useDialogFocusTrap(Boolean(selectedSection), handleCloseRoster);
 
   const {
     data: rawSections,

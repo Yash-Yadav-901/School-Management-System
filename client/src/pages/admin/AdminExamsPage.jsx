@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client.js';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -37,7 +37,18 @@ export function AdminExamsPage() {
   });
   const [gradeRuleError, setGradeRuleError] = useState(null);
 
-  const examModalRef = useDialogFocusTrap(examModalOpen, () => setExamModalOpen(false));
+  const closeExamModal = useCallback(() => {
+    setExamModalOpen(false);
+    setExamFormError(null);
+  }, []);
+
+  const closeGradeModal = useCallback(() => {
+    setGradeModalMode(null);
+    setEditingGradeRule(null);
+    setGradeRuleError(null);
+  }, []);
+
+  const examModalRef = useDialogFocusTrap(examModalOpen, closeExamModal);
   const gradeModalRef = useDialogFocusTrap(Boolean(gradeModalMode), closeGradeModal);
 
   // Fetch sections and subjects for Exam creation
@@ -171,12 +182,6 @@ export function AdminExamsPage() {
       gradePoint: String(rule.gradePoint),
       description: rule.description || '',
     });
-    setGradeRuleError(null);
-  }
-
-  function closeGradeModal() {
-    setGradeModalMode(null);
-    setEditingGradeRule(null);
     setGradeRuleError(null);
   }
 

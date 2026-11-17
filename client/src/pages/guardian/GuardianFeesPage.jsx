@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, ApiClientError } from '../../api/client.js';
@@ -20,7 +20,8 @@ export function GuardianFeesPage() {
   const selectedStudentId = searchParams.get('studentId') || '';
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
-  const invoiceModalRef = useDialogFocusTrap(Boolean(selectedInvoiceId), () => setSelectedInvoiceId(null));
+  const handleCloseInvoiceModal = useCallback(() => setSelectedInvoiceId(null), []);
+  const invoiceModalRef = useDialogFocusTrap(Boolean(selectedInvoiceId), handleCloseInvoiceModal);
 
   // Simulated Payment Form state
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
